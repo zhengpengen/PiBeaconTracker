@@ -1,0 +1,33 @@
+#!/usr/bin/python3
+
+import os,sys
+sys.path.append(os.path.abspath('/home/pi/PiBeaconTracker/BLE-Beacon-Scanner/.'))
+import json
+import ScanUtility
+import bluetooth._bluetooth as bluez
+
+#Set bluetooth device. Default 0.
+dev_id = 0
+try:
+  sock = bluez.hci_open_dev(dev_id)
+except:
+  print ("Error accessing bluetooth")
+
+ScanUtility.hci_enable_le_scan(sock)
+
+#Scans for iBeacons
+try:
+  while True:
+    beaconList = ScanUtility.parse_events(sock, 10)
+    for beacon in beaconList:
+      if beacon['type'] == 'iBeacon': 
+        if beacon['uuid'] == '2f234454-cf6d-4a0f-adf2-f4911ba9ffa6':
+          print("iBeacon:-------------")
+          print(beacon)
+          print("")
+      elif beacon['type'] == 'Overflow': 
+          print("Overflow:-------------")
+          print(beacon)
+          print("")
+except KeyboardInterrupt:
+    pass
