@@ -1,0 +1,52 @@
+===========================
+    Boreground transmit
+===========================
+
+
+[ E4:2B:34:50:11:5B ]
+    AddressType = public
+    Name = Comoesta
+    Paired = 1
+    Modalias = bluetooth:v004Cp710Cd0D70
+    Logged = True
+    Adapter = /org/bluez/hci0
+    ServicesResolved = 0
+    Appearance = 64
+    LegacyPairing = 0
+    TxPower = 12
+    Alias = Comoesta
+    ManufacturerData = dbus.Dictionary({dbus.UInt16(76): dbus.Array([dbus.Byte(1), dbus.Byte(128), dbus.Byte(85), dbus.Byte(0), dbus.Byte(128), dbus.Byte(68), dbus.Byte(103), dbus.Byte(0), dbus.Byte(0), dbus.Byte(0), dbus.Byte(0), dbus.Byte(0), dbus.Byte(0), dbus.Byte(0), dbus.Byte(0), dbus.Byte(0), dbus.Byte(0)], signature=dbus.Signature('y'), variant_level=1)}, signature=dbus.Signature('qv'), variant_level=1)
+    Connected = 0
+    UUIDs = dbus.Array([dbus.String(u'00000000-deca-fade-deca-deafdecacafe'), dbus.String(u'00001000-0000-1000-8000-00805f9b34fb'), dbus.String(u'0000110a-0000-1000-8000-00805f9b34fb'), dbus.String(u'0000110c-0000-1000-8000-00805f9b34fb'), dbus.String(u'0000110e-0000-1000-8000-00805f9b34fb'), dbus.String(u'00001116-0000-1000-8000-00805f9b34fb'), dbus.String(u'0000111f-0000-1000-8000-00805f9b34fb'), dbus.String(u'0000112f-0000-1000-8000-00805f9b34fb'), dbus.String(u'00001132-0000-1000-8000-00805f9b34fb'), dbus.String(u'00001200-0000-1000-8000-00805f9b34fb'), dbus.String(u'00001800-0000-1000-8000-00805f9b34fb'), dbus.String(u'00001801-0000-1000-8000-00805f9b34fb'), dbus.String(u'00001805-0000-1000-8000-00805f9b34fb'), dbus.String(u'0000180a-0000-1000-8000-00805f9b34fb'), dbus.String(u'0000180f-0000-1000-8000-00805f9b34fb'), dbus.String(u'02030302-1d19-415f-86f2-22a2106a0a77'), dbus.String(u'7905f431-b5ce-4e99-a40f-4b1e122d00d0'), dbus.String(u'89d3502b-0f36-433a-8ef4-c502ad55f8dc'), dbus.String(u'9fa480e0-4967-4542-9390-d343dc5d04ae'), dbus.String(u'd0611e78-bbb4-4591-a5f8-487910ae4366')], signature=dbus.Signature('s'), variant_level=1)
+    AdvertisingFlags = dbus.Array([dbus.Byte(26)], signature=dbus.Signature('y'), variant_level=1)
+    RSSI = -48
+    Blocked = 0
+    Icon = phone
+    Trusted = 0
+    Address = E4:2B:34:50:11:5B
+
+
+
+===========================
+    Foreground transmit
+===========================
+[ E4:2B:34:50:11:5B ]
+    AddressType = public
+    Name = Comoesta
+    Paired = 1
+    Modalias = bluetooth:v004Cp710Cd0D70
+    Logged = True
+    Adapter = /org/bluez/hci0
+    ServicesResolved = 0
+    Appearance = 64
+    LegacyPairing = 0
+    Blocked = 0
+    Alias = Comoesta
+    ManufacturerData = dbus.Dictionary({dbus.UInt16(76): dbus.Array([dbus.Byte(1), dbus.Byte(0), dbus.Byte(85), dbus.Byte(0), dbus.Byte(128), dbus.Byte(72), dbus.Byte(109), dbus.Byte(0), dbus.Byte(0), dbus.Byte(0), dbus.Byte(0), dbus.Byte(0), dbus.Byte(0), dbus.Byte(0), dbus.Byte(0), dbus.Byte(0), dbus.Byte(0)], signature=dbus.Signature('y'), variant_level=1)}, signature=dbus.Signature('qv'), variant_level=1)
+    Connected = 0
+    UUIDs = dbus.Array([dbus.String(u'00000000-deca-fade-deca-deafdecacafe'), dbus.String(u'00001000-0000-1000-8000-00805f9b34fb'), dbus.String(u'0000110a-0000-1000-8000-00805f9b34fb'), dbus.String(u'0000110c-0000-1000-8000-00805f9b34fb'), dbus.String(u'0000110e-0000-1000-8000-00805f9b34fb'), dbus.String(u'00001116-0000-1000-8000-00805f9b34fb'), dbus.String(u'0000111f-0000-1000-8000-00805f9b34fb'), dbus.String(u'0000112f-0000-1000-8000-00805f9b34fb'), dbus.String(u'00001132-0000-1000-8000-00805f9b34fb'), dbus.String(u'00001200-0000-1000-8000-00805f9b34fb'), dbus.String(u'00001800-0000-1000-8000-00805f9b34fb'), dbus.String(u'00001801-0000-1000-8000-00805f9b34fb'), dbus.String(u'00001805-0000-1000-8000-00805f9b34fb'), dbus.String(u'0000180a-0000-1000-8000-00805f9b34fb'), dbus.String(u'0000180f-0000-1000-8000-00805f9b34fb'), dbus.String(u'02030302-1d19-415f-86f2-22a2106a0a77'), dbus.String(u'7905f431-b5ce-4e99-a40f-4b1e122d00d0'), dbus.String(u'89d3502b-0f36-433a-8ef4-c502ad55f8dc'), dbus.String(u'9fa480e0-4967-4542-9390-d343dc5d04ae'), dbus.String(u'd0611e78-bbb4-4591-a5f8-487910ae4366')], signature=dbus.Signature('s'), variant_level=1)
+    AdvertisingFlags = dbus.Array([dbus.Byte(0)], signature=dbus.Signature('y'), variant_level=1)
+    RSSI = -51
+    Icon = phone
+    Trusted = 0
+    Address = E4:2B:34:50:11:5B

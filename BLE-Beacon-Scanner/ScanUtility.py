@@ -1,4 +1,33 @@
 #This is a working prototype. DO NOT USE IT IN LIVE PROJECTS
+#==============================================================
+#
+#  Each HCI packet has the following format
+#
+#  0x04 - HCI packet type
+#  0x3E - event type (0x3E is BLE event)
+#  0x2A - Packet len
+#  0x02 - BLE Subevent (0x02=Advert_report) see pg 2382
+#  0x01 - Num of report (0x01=one report)
+#  0x00 - BLE event type (0x00=ADV_IND)
+#  0x01 - Address type (0x00=PUBLIC, 0x01=RANDOM, etc)
+#  0xE9D83394E351 - Mac Address 51:E3:94:33:D8:E9 (RANDOM)
+#  0x1E - Packet len (0x1E=30)
+#  0x02 - Data len  (start of iBeacon packet structure)
+#  0x01 - Data type (0x01 = flags)
+#  0x1A - LE and BR/EDR flag (0x06 usually)
+#  0x1A - Data len
+#  0xFF - Data type (0xFF=Manufacturer specific data)
+#  0x4C - Manufacturer data (0x4C000215 is Apple)
+#  0x00
+#  0x02
+#  0x15
+#  0xXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX - Proxmity UUID
+#  0xMMMM - Major
+#  0xmmmm - Minor
+#  0xPP   - TxPower (twos-complement)
+#  0xRR   - RSSI (twos-complement)
+# 
+#==============================================================
 
 
 import sys
@@ -110,24 +139,23 @@ def parse_events(sock, loop_count=100):
             macAddress = ':'.join(a+b for a,b in zip(fixStructure, fixStructure))
             if sys.version_info[0] == 3:
                 rssi, = struct.unpack("b", bytes([packet[packetOffset-1]]))
-                print("bytes = ")
-                print(bytes([packet[packetOffset-1]]))
             else:
                 rssi, = struct.unpack("b", packet[packetOffset-1])
 
             #resultsArray = [{"type": type, "uuid": uuid, "major": majorVal, "minor": minorVal, "rssi": rssi, "macAddress": macAddress}]
-            remain = dataString[0:-1]
+            remain = dataString[0:96]
             resultsArray = [{"type": type, "ptype" : ptype, "event": event, "plen" : plen, "uuid": uuid, "major": majorVal, "minor": minorVal, "rssi": rssi, "macAddress": macAddress, "dataString" : remain}]
 
             return resultsArray
-
+        ''' 
         if dataString[38:42] == '4c00':
             """
             Selects parts of the bluetooth packets.
             """
             type = "Overflow"
-            remain = dataString[0:-1]
+            remain = dataString[0:96]
             resultsArray = [{"type": type, "ptype" : ptype, "event": event, "plen" : plen, "dataString" : remain}]
             return resultsArray
+        ''' 
 
     return results
