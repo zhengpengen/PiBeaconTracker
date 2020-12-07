@@ -1,0 +1,10 @@
+{
+  "uuid" : "{2f234454-cf6d-4a0f-adf2-f4911ba9ffa6}", 
+  "major": 4321,
+  "minor": 8765,
+  "name" : "Device 1",
+  "org" : "E-Motion", 
+  "onTime" : 3000.0,
+  "wakeTime" : 3000.0, 
+  "socialDist" : -60.0 
+}

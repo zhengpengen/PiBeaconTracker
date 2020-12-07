@@ -129,22 +129,36 @@ def parse_events(sock, loop_count=100):
             uuid = dataString[46:54] + "-" + dataString[54:58] + "-" + dataString[58:62] + "-" + dataString[62:66] + "-" + dataString[66:78]
             major = dataString[78:82]
             minor = dataString[82:86]
+            txPower = dataString[86:88]
+
             majorVal = int("".join(major.split()[::-1]), 16)
             minorVal = int("".join(minor.split()[::-1]), 16)
+            txPowerVal = int("".join(txPower.split()[::-1]), 16) - 256
+
             """
             Organises Mac Address to display properly
             """
             scrambledAddress = dataString[14:26]
             fixStructure = iter("".join(reversed([scrambledAddress[i:i+2] for i in range(0, len(scrambledAddress), 2)])))
             macAddress = ':'.join(a+b for a,b in zip(fixStructure, fixStructure))
+
+            '''
+            Get RSSI
+            '''
             if sys.version_info[0] == 3:
                 rssi, = struct.unpack("b", bytes([packet[packetOffset-1]]))
             else:
                 rssi, = struct.unpack("b", packet[packetOffset-1])
 
-            #resultsArray = [{"type": type, "uuid": uuid, "major": majorVal, "minor": minorVal, "rssi": rssi, "macAddress": macAddress}]
             remain = dataString[0:96]
-            resultsArray = [{"type": type, "ptype" : ptype, "event": event, "plen" : plen, "uuid": uuid, "major": majorVal, "minor": minorVal, "rssi": rssi, "macAddress": macAddress, "dataString" : remain}]
+            resultsArray = [{"type": type, "ptype" : ptype, "event": event, "plen" : plen, 
+                             "uuid": uuid, 
+                             "major": majorVal, 
+                             "minor": minorVal, 
+                             "rssi": rssi, 
+                             "txPower": txPowerVal, 
+                             "macAddress": macAddress, 
+                             "dataString" : remain}]
 
             return resultsArray
         ''' 

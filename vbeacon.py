@@ -25,6 +25,7 @@ from __future__ import print_function
 import os 
 import sys
 import time
+import datetime
 import json
 import getopt 
 import uuid 
@@ -35,6 +36,8 @@ import dbus.mainloop.glib
 import dbus.service
 import bluetooth._bluetooth as bluez
 import ScanUtility
+from PiSugar2 import PiSugar2
+from Buzzer import Buzzer
 
 
 try:
@@ -226,21 +229,27 @@ class vBeacon():
     #-------------------------------------------------------------------------
     #  Initializer
     #-------------------------------------------------------------------------
-    def __init__(self, major, minor):
+    def __init__(self):
         self.advertLoop = None
         self.advertiser = None
         self.ad_manager = None
         self.advertThread = None
-
+    
         self.scanThread = None
         self.scanExit = True 
-
+        self.scanMutex = threading.Lock()
+        self.beaconList = {}
+   
         self.company_id = 0x004c 
         self.beacon_type = [0x02, 0x15] 
         self.uuid = uuid.UUID('{2f234454-cf6d-4a0f-adf2-f4911ba9ffa6}')
-        self.major = major 
-        self.minor = minor 
         self.tx_power = [0xb3]
+        self.major = 0 
+        self.minor = 0 
+
+        self.deviceSettings = {}
+        self.pisugar = PiSugar2()
+        self.buzzer = Buzzer(16)
 
     #-------------------------------------------------------------------------
     #  Advertiser registration callback
@@ -269,6 +278,23 @@ class vBeacon():
         if LE_ADVERTISING_MANAGER_IFACE in props:
             return o
       return None
+
+
+    #-------------------------------------------------------------------------
+    #  Given a beacon return device ID string by concatenating 
+    #  major and minor in a 4 byte value
+    #-------------------------------------------------------------------------
+    def _deviceKey(self, beacon): 
+      key = hex(beacon['major']) + hex(beacon['minor'])
+      return key 
+
+
+    #-------------------------------------------------------------------------
+    #  Return device ID which is concatenation of major and minor in hex 
+    #-------------------------------------------------------------------------
+    def deviceId(self):
+      id = hex(self.major) + hex(self.minor)
+      return id 
 
 
     #-------------------------------------------------------------------------
@@ -318,8 +344,8 @@ class vBeacon():
       self.advertiser.add_manufacturer_data(self.company_id, 
                                             self.beacon_type + 
                                             list(self.uuid.bytes) + 
-                                            self.major + 
-                                            self.minor + 
+                                            [self.major/256, self.major%256] + 
+                                            [self.minor/256, self.minor%256] + 
                                             self.tx_power)
 
       self.advertLoop = GLib.MainLoop()
@@ -341,7 +367,7 @@ class vBeacon():
     #-------------------------------------------------------------------------
     #  Scan loop
     #-------------------------------------------------------------------------
-    def scanLoop(self):
+    def _scanLoop(self):
 
       #Set bluetooth device. Default 0.
       dev_id = 0
@@ -354,15 +380,20 @@ class vBeacon():
 
       self.scanExit = False 
 
+      self.scanMutex.acquire()
+      self.beaconList = {}
+      self.scanMutex.release()
+
       while not self.scanExit:
-        beaconList = ScanUtility.parse_events(sock, 10)
-        for beacon in beaconList:
+        beacons = ScanUtility.parse_events(sock, 10)
+
+        currTime = datetime.datetime.now()
+
+        self.scanMutex.acquire()
+        for beacon in beacons:
           if beacon['type'] == 'iBeacon':
-            #print(beacon)
             if beacon['uuid'] == str(self.uuid):
-              print("iBeacon:-------------")
-              print(beacon)
-              print("")
+              self.beaconList[self._deviceKey(beacon)] = (currTime, beacon) 
           '''
           elif beacon['type'] == 'Overflow':
             if beacon['uuid'] == '2f234454-cf6d-4a0f-adf2-f4911ba9ffa6':
@@ -370,6 +401,8 @@ class vBeacon():
               print(beacon)
               print("")
           '''
+        self.scanMutex.release()
+
 
     #-------------------------------------------------------------------------
     #  Stop scanning 
@@ -384,45 +417,103 @@ class vBeacon():
     #  Start scanning 
     #-------------------------------------------------------------------------
     def startScanning(self):
-      self.scanThread = threading.Thread(target=self.scanLoop)
+      self.scanThread = threading.Thread(target=self._scanLoop)
       self.scanThread.setDaemon(True)
       self.scanThread.start()
       print("Start scanning")
 
 
-#=============================================================================
-#
-#   main()
-#
-#=============================================================================
+    #-------------------------------------------------------------------------
+    #  Wake after function
+    #-------------------------------------------------------------------------
+    def setWakeAfter(self, seconds):
+      now = datetime.datetime.now()
+      res = self.pisugar.set_rtc_alarm(now + datetime.timedelta(0, seconds), [1, 1, 1, 1, 1, 1, 1] )
+
+
+    #-------------------------------------------------------------------------
+    #  Sleep function 
+    #-------------------------------------------------------------------------
+    def gotoSleep(self):
+      self.pisugar.force_shutdown()
+
+
+    #-------------------------------------------------------------------------
+    #  Check social distancing
+    #-------------------------------------------------------------------------
+    def checkSocialDistancing(self, dist):
+      print("Checking social distance...")
+      now = datetime.datetime.now()
+
+      inViolation = False
+ 
+      self.scanMutex.acquire()
+      for key in self.beaconList:
+        (t, b) = self.beaconList[key]
+        if (b['rssi'] > dist):  
+          inViolation = True 
+      self.scanMutex.release()
+     
+      if inViolation: 
+        print("Social distance violation!!!") 
+        self.buzzer.play(sound=self.buzzer.alert, repeat=0)
+
+   
+    #-------------------------------------------------------------------------
+    #  Run the App
+    #-------------------------------------------------------------------------
+    def runApp(self, settings):
+
+      with open(settings) as f:
+        self.deviceSettings = json.load(f)
+
+      self.uuid       = uuid.UUID(self.deviceSettings['uuid'])
+      self.major      = self.deviceSettings['major']
+      self.minor      = self.deviceSettings['minor'] 
+      self.name       = self.deviceSettings['name']
+      self.org        = self.deviceSettings['org']
+      self.onTime     = self.deviceSettings['onTime']
+      self.wakeTime   = self.deviceSettings['wakeTime']
+      self.socialDist = self.deviceSettings['socialDist']
+
+      print(f"uuid={str(self.uuid)}")
+
+      self.startAdvert()
+      self.startScanning()
+ 
+      done = False
+      seconds = 0
+
+      while not done: 
+ 
+        time.sleep(1.0)
+        seconds = seconds + 1 
+
+        # Report to backend
+        # Log to file
+   
+        self.checkSocialDistancing(self.socialDist)
+
+        if seconds >= self.onTime : 
+          break
+
+
+      print("Shutting down....")
+      self.stopScanning()
+      self.stopAdvert()
+
+      print(f"Wake after {self.wakeTime - seconds}")
+      #self.setWakeAfter(self.wakeTime - seconds)
+      #self.gotoSleep()
+
+#=======================================================================
+#  main()
+#=======================================================================
 def main(argv):
 
-  # Parse arguments
-  try:
-    opts, args = getopt.getopt(argv, 'dp')
-  except getopt.GetoptError:
-    sys.exit(-1) 
+  beacon = vBeacon()        
+  beacon.runApp(argv[0])
 
-  for opt, arg in opts:
-    if opt == '-p':
-      print("got -p")
-    elif opt == '-d':
-      print("got -d")
-
-  beacon = vBeacon(major=[0x11, 0x22], minor=[0x33, 0x44])
-  print(f"uuid={str(beacon.uuid)}")
-
-  beacon.startAdvert()
-  beacon.startScanning()
- 
-  done = False
-  while not done: 
-    instr = input("> ")   
-    if instr == 'quit':
-      done = True
-  beacon.stopScanning()
-  beacon.stopAdvert()
-  
 
 if __name__ == '__main__':
   main(sys.argv[1:])    
