@@ -25,9 +25,11 @@ try:
           print("iBeacon:-------------")
           print(beacon)
           print("")
+      ''' 
       elif beacon['type'] == 'Overflow': 
           print("Overflow:-------------")
           print(beacon)
           print("")
+      ''' 
 except KeyboardInterrupt:
     pass
