@@ -28,10 +28,17 @@ class Netcat:
     #
     #------------------------------------------------
     def __init__(self, ip: str, port: int):
-        self.buff = ""
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.connect((ip, port))
+      self.open(ip, port)
 
+    #------------------------------------------------
+    #  Open socket at ip and port    
+    #------------------------------------------------
+    def open(self, ip: str, port: int):
+      self.ip = ip
+      self.port = port
+      self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+      self.socket.settimeout(0.01)
+      self.socket.connect((self.ip, self.port))
 
     #------------------------------------------------
     #
@@ -42,27 +49,15 @@ class Netcat:
     #
     #------------------------------------------------
     def read(self, length: int = 1024) -> str:
-        return self.socket.recv(length).decode("UTF-8").rstrip()
-
-    #------------------------------------------------
-    #
-    # Read data into the buffer until we have data 
-    #
-    # Not currently used
-    #
-    #------------------------------------------------
-    '''
-    def read_until(self, data):
-
-        while not data in self.buff:
-            self.buff += self.socket.recv(1024)
-
-        pos = self.buff.find(data)
-        rval = self.buff[: pos + len(data)]
-        self.buff = self.buff[pos + len(data) :]
-
-        return rval
-    '''
+      done = False
+      result = ""
+      while not done:
+        try:
+          data = self.socket.recv(length)
+          result = data.decode('utf-8')
+        except socket.error as e:
+          done = True
+      return result.rstrip()
 
     #------------------------------------------------
     #
@@ -70,8 +65,8 @@ class Netcat:
     #
     #------------------------------------------------
     def write(self, data: str) -> None:
-        data = data.encode("UTF-8")
-        self.socket.send(data)
+      data = data.encode("UTF-8")
+      self.socket.sendall(data)
 
     #------------------------------------------------
     #
@@ -79,7 +74,7 @@ class Netcat:
     #
     #------------------------------------------------
     def close(self) -> None:
-        self.socket.close()
+      self.socket.close()
 
     #------------------------------------------------
     #
@@ -89,18 +84,8 @@ class Netcat:
     # 
     #------------------------------------------------
     def query(self, data: str) -> str:
-        self.write(data)
-        return self.read()
-
-
-#---------------------------------------------------------------------------
-#
-#  InvalidRequest object 
-#
-#---------------------------------------------------------------------------
-class InvalidRequest(Exception):
-    pass
-
+      self.write(data)
+      return self.read()
 
 
 #---------------------------------------------------------------------------
@@ -115,16 +100,11 @@ class InvalidRequest(Exception):
 class PiSugar2:
 
     #------------------------------------------------
-    #
     #  Constructor
-    #
     #------------------------------------------------
     def __init__(self, ip="127.0.0.1", port=8423):
-        self.netcat = Netcat(ip, port)
-        self.model = None
-
-        # Create a named tuple
-        self.nt_values = namedtuple("PiSugar2", "name value command")
+      self.netcat = Netcat(ip, port)
+      _ = self.set_rtc_from_pi()
 
     #------------------------------------------------
     #
@@ -141,144 +121,111 @@ class PiSugar2:
 
     #------------------------------------------------
     #
-    #  Converts the provided values into a named tuple:
-    #   .name    = Name of the value
-    #   .value   = Value
-    #   .command = Command used to request data 
-    #
-    #------------------------------------------------
-    def _nt(self, output: bytes, name: str = None) -> namedtuple:
-
-        # Check to make sure the request was valid
-        if output == "Invalid request.":
-            raise InvalidRequest
-
-        # Split the values received into name and value
-        tup = tuple(output.split(": ", 1))
-
-        # Set name to default if one not passed
-        if not name or name == "":
-            name = tup[0]
-
-        # Set the value
-        if tup[1] == "false":
-            value = False
-        elif tup[1] == "true":
-            value = True
-        elif tup[1].isnumeric():
-            # A numeric value
-            value = int(tup[1])
-        elif self._is_float(tup[1]):
-            value = float(tup[1])
-        else:
-            try:
-                # If the return is a datetime object
-                value = datetime.fromisoformat(tup[1])
-            except ValueError:
-                # A string value
-                value = tup[1]
-
-        # Assign them to a named tuple of .name and .value
-        values = self.nt_values(name=name, value=value, command=tup[0])
-
-        return values
-
-    #------------------------------------------------
-    #
     #  Returns the currently installed model number
+    #  which is a string
     #
     #------------------------------------------------
-    def get_model(self) -> namedtuple:
-        if not self.model:
-            # If we've already checked the model once, 
-            # it hasn't changed.
-            output = self.netcat.query("get model")
-            self._model = self._nt(output)
-        return self._model
+    def get_model(self) -> str:
+      output = self.netcat.query("get model")
+      tup = output.split(": ", 1)
+      return tup[1]
 
     #------------------------------------------------
     #
     #  Returns the current battery level percentage
+    #  which is a float.
     #
     #  e.g., battery: 84.52326
     #
     #------------------------------------------------
-    def get_battery_percentage(self) -> namedtuple:
-        output = self.netcat.query("get battery")
-        return self._nt(output, "percentage")
+    def get_battery_percentage(self) -> float:
+      output = self.netcat.query("get battery")
+      tup = output.split(": ", 1)
+      return float(tup[1]) 
 
     #------------------------------------------------
     #
     #  Returns the current battery voltage
+    #  which is float 
     #
     #  e.g., battery_v: 4.0150776
     #
     #------------------------------------------------
-    def get_voltage(self) -> namedtuple:
-        output = self.netcat.query("get battery_v")
-        return self._nt(output, "voltage")
+    def get_voltage(self) -> float:
+      output = self.netcat.query("get battery_v")
+      tup = output.split(": ", 1)
+      return float(tup[1]) 
 
     #------------------------------------------------
     #
     #  Returns the current battery amperage draw
+    #  which is a float
     #
     #  e.g., battery_i: 0.0040908856
     #
     #------------------------------------------------
-    def get_amperage(self) -> namedtuple:
-        output = self.netcat.query("get battery_i")
-        return self._nt(output, "amps")
+    def get_amperage(self) -> float:
+      output = self.netcat.query("get battery_i")
+      tup = output.split(": ", 1)
+      return float(tup[1]) 
 
     #------------------------------------------------
     #
     #  Returns if the battery is currently charging
+    #  which is boolean
     #
     #  e.g., battery_charging: false
     #
     #------------------------------------------------
-    def get_charging_status(self) -> namedtuple:
-        output = self.netcat.query("get battery_charging")
-        return self._nt(output, "charging")
+    def get_charging_status(self) -> bool:
+      output = self.netcat.query("get battery_charging")
+      tup = output.split(": ", 1)
+      return tup[1] == "true"
 
     #------------------------------------------------
     #
     #  Returns the RTC time value with a datetime object 
-    #
+    #  
     #  e.g., rtc_time: 2020-07-17T01:44:20+01:00
     #
     #------------------------------------------------
-    def get_time(self) -> namedtuple:
-        output = self.netcat.query("get rtc_time")
-        return self._nt(output, "time")
+    def get_time(self) -> datetime:
+      output = self.netcat.query("get rtc_time")
+      tup = output.split(": ", 1)
+      return datetime.fromisoformat(tup[1])
 
     #------------------------------------------------
     #
-    #  Returns the status of alarm enable
+    #  Returns the status of alarm enable which is
+    #  boolean
     #
     #  e.g., rtc_alarm_enabled: false
     #
     #------------------------------------------------
-    def get_alarm_enabled(self) -> namedtuple:
-        output = self.netcat.query("get rtc_alarm_enabled")
-        return self._nt(output, "alarm_enabled")
+    def get_alarm_enabled(self) -> bool:
+      output = self.netcat.query("get rtc_alarm_enabled")
+      tup = output.split(": ", 1)
+      return tup[1] == "true"
 
     #------------------------------------------------
     #
     #  Returns the time the alarm is set for
     #
     #------------------------------------------------
-    def get_alarm_time(self) -> namedtuple:
-        output = self.netcat.query("get rtc_alarm_time")
-        return self._nt(output, "alarm_time")
+    def get_alarm_time(self) -> datetime:
+      output = self.netcat.query("get rtc_alarm_time")
+      tup = output.split(": ", 1)
+      return datetime.fromisoformat(tup[1])
 
     #------------------------------------------------
     #
-    #  Returns alarm repeat value
+    #  Returns alarm repeat value which is int
     #
     #------------------------------------------------
-    def get_alarm_repeat(self) -> namedtuple:
-        output = self.netcat.query("get alarm_repeat")
-        return self._nt(output)
+    def get_alarm_repeat(self) -> int:
+      output = self.netcat.query("get alarm_repeat")
+      tup = output.split(": ", 1)
+      return int(tup[1])
 
     #------------------------------------------------
     #
@@ -287,14 +234,9 @@ class PiSugar2:
     #  press = "single", "double", or "long"
     #
     #------------------------------------------------
-    def get_button_enable(self, press: str) -> namedtuple:
-        if press.lower() in ["single", "double", "long"]:
-            output = self.netcat.query(f"get button_enable {press}")
-            nt = namedtuple("ButtonEnable", "name value command")
-            value = True if output.split(" ")[2] == "true" else False
-            return nt(f"button_enable_{press}", value, "button_enable")
-        else:
-            raise InvalidRequest
+    def get_button_enable(self, press: str) -> bool:
+      output = self.netcat.query(f"get button_enable {press}")
+      return output.split(" ")[2] == "true"
 
     #------------------------------------------------
     #
@@ -303,36 +245,26 @@ class PiSugar2:
     #  press = "single", "double", or "long"
     #
     #------------------------------------------------
-    def get_button_shell(self, press: str) -> namedtuple:
-        if press.lower() in ["single", "double", "long"]:
-            output = self.netcat.query(f"get button_shell {press}")
+    def get_button_shell(self, press: str) -> str: 
+      output = self.netcat.query(f"get button_shell {press}")
+      split = output.split(" ", 2)
+      try:
+        shell = split[2]
+      except IndexError:
+        shell = None
 
-            # Use a custom namedtuple instead of the normal one, so we get to do all the work here
-            nt = namedtuple("ButtonShell", "name value command shell")
-
-            split = output.split(" ", 2)
-            name = split[0]
-            value = split[1]
-            command = f"button_shell_{press}"
-
-            try:
-                shell = split[2]
-            except IndexError:
-                shell = None
-
-            return nt(name, value, command, shell)
-        else:
-            raise InvalidRequest
+      return shell 
 
     #------------------------------------------------
     #
     #  Returns the safe shutdown level in percentage 
-    #  of battery
+    #  of battery; which is float
     #
     #------------------------------------------------
-    def get_safe_shutdown_level(self) -> namedtuple:
-        output = self.netcat.query("get safe_shutdown_level")
-        return self._nt(output)
+    def get_safe_shutdown_level(self) -> float:
+      output = self.netcat.query("get safe_shutdown_level")
+      tup = output.split(": ", 1)
+      return tup[1] == "true"
 
     #------------------------------------------------
     #
@@ -340,9 +272,10 @@ class PiSugar2:
     #  (new model only)
     #
     #------------------------------------------------
-    def get_battery_allow_charging(self) -> namedtuple:
-        output = self.netcat.query("get battery_allow_charging")
-        return self._nt(output)
+    def get_battery_allow_charging(self) -> bool:
+      output = self.netcat.query("get battery_allow_charging")
+      tup = output.split(": ", 1)
+      return tup[1] == "true"
 
     #------------------------------------------------
     #
@@ -350,9 +283,10 @@ class PiSugar2:
     #  (new model only)
     #
     #------------------------------------------------
-    def get_battery_power_plugged(self) -> namedtuple:
-        output = self.netcat.query("get battery_power_plugged")
-        return self._nt(output)
+    def get_battery_power_plugged(self) -> bool:
+      output = self.netcat.query("get battery_power_plugged")
+      tup = output.split(": ", 1)
+      return tup[1] == "true"
 
     #------------------------------------------------
     #
@@ -360,27 +294,31 @@ class PiSugar2:
     #  4 for old model, 2 for new model
     #
     #------------------------------------------------
-    def get_battery_led_amount(self) -> namedtuple:
-        output = self.netcat.query("get battery_led_amount")
-        return self._nt(output)
+    def get_battery_led_amount(self) -> int:
+      output = self.netcat.query("get battery_led_amount")
+      tup = output.split(": ", 1)
+      return int(tup[1])
 
     #------------------------------------------------
     #
     #  Returns the safe shutdown delay in seconds
+    #  which is float
     #
     #------------------------------------------------
-    def get_safe_shutdown_delay(self) -> namedtuple:
-        output = self.netcat.query("get safe_shutdown_delay")
-        return self._nt(output)
+    def get_safe_shutdown_delay(self) -> float:
+      output = self.netcat.query("get safe_shutdown_delay")
+      tup = output.split(": ", 1)
+      return float(tup[1]) 
 
     #------------------------------------------------
     #
     #  Sets the RTC to the current time on the Pi
     #
     #------------------------------------------------
-    def set_rtc_from_pi(self) -> namedtuple:
-        output = self.netcat.query("rtc_pi2rtc")
-        #return self._nt(output)
+    def set_rtc_from_pi(self) -> bool:
+      output = self.netcat.query("rtc_pi2rtc")
+      tup = output.split(": ", 1)
+      return tup[1] == "done" 
 
     #------------------------------------------------
     #
@@ -389,10 +327,10 @@ class PiSugar2:
     #  Upstream not working
     # 
     #------------------------------------------------
-    def set_pi_from_rtc(self) -> namedtuple:  
-        output = self.netcat.query("rtc_rtc2pi")
-        return self._nt(output)
-
+    def set_pi_from_rtc(self) -> bool:  
+      output = self.netcat.query("rtc_rtc2pi")
+      tup = output.split(": ", 1)
+      return tup[1] == "done" 
 
     #------------------------------------------------
     #
@@ -400,9 +338,10 @@ class PiSugar2:
     #
     #  Not working (may depend on systemd-timesyncd.service )
     #------------------------------------------------
-    def set_time_from_web(self) -> namedtuple:
-        output = self.netcat.query("rtc_web")
-        return self._nt(output)
+    def set_time_from_web(self) -> bool:
+      output = self.netcat.query("rtc_web")
+      tup = output.split(": ", 1)
+      return tup[1] == "done" 
 
     #------------------------------------------------
     #
@@ -413,36 +352,33 @@ class PiSugar2:
     #           0 or 1 for Sunday-Saturday
     #
     #------------------------------------------------
-    def set_rtc_alarm(self, time: datetime.datetime, repeat: list = [0, 0, 0, 0, 0, 0, 0]) -> namedtuple:
+    def set_rtc_alarm(self, time: datetime.datetime, repeat: list = [0, 0, 0, 0, 0, 0, 0]) -> bool:
+      timestr = datetime.isoformat(time)
+      if not datetime.utcoffset(time):
+          timestr += "-06:00"
+      # Build repeat string
+      s = str()
+      for x in repeat:
+        # Only accept 0 or 1
+        if x in [0, 1]:
+          s += str(x)
+        else:
+          return False 
 
-        timestr = datetime.isoformat(time)
-
-        if not datetime.utcoffset(time):
-            timestr += "-06:00"
-
-        # Build repeat string
-        s = str()
-        for x in repeat:
-            # Only accept 0 or 1
-            if x in [0, 1]:
-                s += str(x)
-            else:
-                raise ValueError
-
-        repeat_dec = int(s, 2)  # Convert the string to decimal from binary
-
-        print(f"rtc_alarm_set {timestr} {repeat_dec}")
-        output = self.netcat.query(f"rtc_alarm_set {timestr} {repeat_dec}")
-        return self._nt(output)
+      repeat_dec = int(s, 2)  # Convert the string to decimal from binary
+      output = self.netcat.query(f"rtc_alarm_set {timestr} {repeat_dec}")
+      tup = output.split(": ", 1)
+      return tup[1] == "done" 
 
     #------------------------------------------------
     #
     #  Disable the RTC alarm
     #
     #------------------------------------------------
-    def disable_alarm(self) -> namedtuple:
-        output = self.netcat.query("rtc_alarm_disable")
-        return self._nt(output)
+    def disable_alarm(self) -> bool:
+      output = self.netcat.query("rtc_alarm_disable")
+      tup = output.split(": ", 1)
+      return tup[1] == "done" 
 
     #------------------------------------------------
     #
@@ -451,13 +387,10 @@ class PiSugar2:
     #    enable = True/False, defaults to True
     #
     #------------------------------------------------
-    def set_button_enable(self, press: str, enable: bool = True) -> namedtuple:
-
-        if press.lower() in ["single", "double", "long"]:
-            output = self.netcat.query(f"set_button_enable {press} {int(enable)}")
-            return self._nt(output)
-        else:
-            raise InvalidRequest
+    def set_button_enable(self, press: str, enable: bool = True) -> bool:
+      output = self.netcat.query(f"set_button_enable {press} {int(enable)}")
+      tup = output.split(": ", 1)
+      return tup[1] == "done" 
 
     #------------------------------------------------
     #  Sets the shell command to run when the button is pressed
@@ -466,15 +399,13 @@ class PiSugar2:
     #    enable = True/False/None to enable the command, 
     #             defaults to True, None for no change.
     #------------------------------------------------
-    def set_button_shell( self, press: str, shell: str, enable: bool = True) -> namedtuple:
-
-        if press.lower() in ["single", "double", "long"]:
-            if enable is not None:
-                self.netcat.query(f"set_button_enable {press} {int(enable)}")
-            output = self.netcat.query(f"set_button_shell {press} {shell}")
-            return self._nt(output)
-        else:
-            raise InvalidRequest
+    def set_button_shell( self, press: str, shell: str, enable: bool = True) -> bool:
+      if self.set_button_enable(press, enable): 
+        output = self.netcat.query(f"set_button_shell {press} {shell}")
+        tup = output.split(": ", 1)
+        return tup[1] == "done" 
+      else:
+        return False 
 
     #------------------------------------------------
     #
@@ -482,12 +413,13 @@ class PiSugar2:
     #  level max: 30
     #
     #------------------------------------------------
-    def set_safe_shutdown_level(self, level: int):
-        level = int(level)
-        if level > 30 or level < 0:
-            raise InvalidRequest
-        output = self.netcat.query(f"set_safe_shutdown_level {level}")
-        return self._nt(output)
+    def set_safe_shutdown_level(self, level: int) -> bool:
+      level = int(level)
+      if level > 30 or level < 0:
+        return False
+      output = self.netcat.query(f"set_safe_shutdown_level {level}")
+      tup = output.split(": ", 1)
+      return tup[1] == "done" 
 
     #------------------------------------------------
     #
@@ -495,86 +427,114 @@ class PiSugar2:
     #  seconds max: 120
     #
     #------------------------------------------------
-    def set_safe_shutdown_delay(self, delay: int):
-        delay = int(delay)
-        if level > 120 or level < 0:
-            raise InvalidRequest
-
-        output = self.netcat.query(f"set_safe_shutdown_delay {delay}")
-        return self._nt(output)
+    def set_safe_shutdown_delay(self, delay: int) -> bool:
+      delay = int(delay)
+      if level > 120 or level < 0:
+        return False 
+      output = self.netcat.query(f"set_safe_shutdown_delay {delay}")
+      tup = output.split(": ", 1)
+      return tup[1] == "done" 
 
     #------------------------------------------------
     #  
     #  Get alarm flags
+    #  return a string of 0 and 1
+    # 
+    #------------------------------------------------
+    def get_alarm_flag(self) -> bool:
+      output = self.netcat.query("get rtc_alarm_flag")
+      tup = output.split(": ", 1)
+      return tup[1] == "true"
+
+    #------------------------------------------------
+    #  
+    #  Get button press , returns a string of:
+    #  single, double, long
     #
     #------------------------------------------------
-    def get_alarm_flag(self) -> namedtuple:
-        output = self.netcat.query(f"get rtc_alarm_flag")
-        return self._nt(output)
-
-    def rtc_test_wake(self) -> namedtuple:
-        output = self.netcat.query(f"rtc_test_wake")
-        return self._nt(output)
+    def get_button_press(self) -> str:
+      output = self.netcat.query("get button_press")
+      tup = output.split(": ", 1)
+      if len(tup) == 1:
+        return tup[0] 
+      else:
+        return tup[1]
+ 
+ 
+    #------------------------------------------------
+    #  
+    #  Test rtc wake 
+    #
+    #------------------------------------------------
+    def rtc_test_wake(self) -> bool:
+      output = self.netcat.query("rtc_test_wake")
+      tup = output.split(": ", 1)
+      return tup[1] == "done" 
    
     #------------------------------------------------
     #  
     #  Force shutdown the battery
     #
     #------------------------------------------------
-    def force_shutdown(self):
-        output = self.netcat.query(f"force_shutdown")
-        return self._nt(output)
+    def force_shutdown(self) -> bool:
+      output = self.netcat.query("force_shutdown")
+      tup = output.split(": ", 1)
+      return tup[1] == "done" 
 
 
 #------------------------------------------------
 #  Wake after function
 #------------------------------------------------
 def set_wake_after(seconds):
-    now = datetime.now()
-    res = pisugar.set_rtc_alarm(now + timedelta(0, seconds), [1, 1, 1, 1, 1, 1, 1] )
+  now = datetime.now()
+  res = pisugar.set_rtc_alarm(now + timedelta(0, seconds), [1, 1, 1, 1, 1, 1, 1] )
 
 
 #------------------------------------------------
 #  Sleep function 
 #------------------------------------------------
 def goto_sleep():
-    pisugar.force_shutdown()
+  pisugar.force_shutdown()
 
 
 #------------------------------------------------
 #  Main
 #------------------------------------------------
 if __name__ == "__main__":
-    pisugar = PiSugar2()
+  pisugar = PiSugar2()
 
-    # Synchronize RTC with PI as reference
-    pisugar.set_rtc_from_pi()
+  '''
+  while True:
+    print(f"{pisugar.get_button_press()}")
+    time.sleep(0.1)
 
-    # Set wake alarm for 30 second
-    set_wake_after(120)
-    goto_sleep()
+  # Set wake alarm for 30 second
+  set_wake_after(120)
+  goto_sleep()
 
 
-    # Below are some useful functions for debugging
-    # but are commented out
-    ''' 
-    count = 0
-    while True:
-       print(f"#{count} {pisugar.get_alarm_flag()}")
-       time.sleep(1)
-       count = count + 1
+  # Below are some useful functions for debugging
+  # but are commented out
 
-    print(f"{pisugar.get_model()}")
-    print(f"{pisugar.get_battery_percentage()}")
-    print(f"{pisugar.get_voltage()}")
-    print(f"{pisugar.get_amperage()}")
-    print(f"{pisugar.get_charging_status()}")
-    print(f"{pisugar.get_time()}")
-    print(f"{pisugar.get_alarm_enabled()}")
-    print(f"{pisugar.get_alarm_time()}")
-    print(f"{pisugar.get_alarm_repeat()}")
-    print(f"{pisugar.get_button_enable('single')}")
-    print(f"{pisugar.get_button_shell('single')}")
-    print(f"{pisugar.get_safe_shutdown_level()}")
-    print(f"{pisugar.get_safe_shutdown_delay()}")
-    ''' 
+  count = 0
+  while True:
+    print(f"#{count} {pisugar.get_alarm_flag()}")
+    time.sleep(1)
+    count = count + 1
+  '''
+
+  print(f"get_alarm_repeat = {pisugar.get_alarm_repeat()}")
+  print(f"get_time = {pisugar.get_time()}")
+  print(f"get_battery_percenteage = {pisugar.get_battery_percentage()}")
+  print(f"get_model = {pisugar.get_model()}")
+  print(f"get_button_shell(single) = {pisugar.get_button_shell('single')}")
+  print(f"get_voltage = {pisugar.get_voltage()}")
+  print(f"get_amaperage = {pisugar.get_amperage()}")
+  print(f"get_charging_status = {pisugar.get_charging_status()}")
+  print(f"get_alarm_enabled = {pisugar.get_alarm_enabled()}")
+  print(f"get_alarm_time = {pisugar.get_alarm_time()}")
+  print(f"get_alarm_flag = {pisugar.get_alarm_flag()}")
+  print(f"get_button_enable(single) = {pisugar.get_button_enable('single')}")
+  print(f"get_safe_shutdown_delay = {pisugar.get_safe_shutdown_delay()}")
+  print(f"get_button_press = {pisugar.get_button_press()}")
+  print(f"get_safe_shutdown_level = {pisugar.get_safe_shutdown_level()}")
