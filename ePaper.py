@@ -26,6 +26,7 @@ import time
 from PIL import Image,ImageDraw,ImageFont
 import traceback
 
+
 #=============================================================================
 #
 #  ePaper class - use to display UI
@@ -231,11 +232,12 @@ class ePaper:
       print("ctrl + c:")
       self.shutdown() 
 
+
 #-----------------------------------------------------------------------------
 #  main()
 #-----------------------------------------------------------------------------
 def main():
-  display = ePaper()
+  display = ePaper() 
   print(f"Display (WxH) is {display.width}x{display.height}")
   display.runTest()
  

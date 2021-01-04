@@ -1,10 +1,9 @@
 #!/usr/bin/python3
-# -*- coding:utf-8 -*-
 #=============================================================================
 #
 #  ui.py
 #
-#  V Beacon user interface
+#  VBeacon user interface
 #
 #  Author: E-Motion Inc
 #
@@ -23,221 +22,218 @@
 import sys
 import os
 import time
-from ePaper import ePaper
-from 
-  
-#=============================================================================
-#
-#  ePaper class - use to display UI
-#
-#=============================================================================
-class UI:
+from PIL import Image,ImageDraw,ImageFont
+from ePaper import ePaper 
+from PiSugar2 import PiSugar2 
 
-  picdir = "./pic"
-  font15 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 15)
-  font24 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 24)
 
-  #---------------------------------------------------------------------------
-  #  Constructor
-  #---------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
+#   Widget 
+#-----------------------------------------------------------------------------
+class Widget:
+  #----------------------------------------------
+  #  Constructor 
+  #----------------------------------------------
   def __init__(self):
-    epd2in13_V2.epdconfig.module_init()
-    self.epd = epd2in13_V2.EPD()
-    self.epd.init(self.epd.FULL_UPDATE)
+    self.parent = None
+    self.classname = "" 
+    self.id = -1 
+    self.parent = None 
+    self.dim = (0,0) 
+    self.pos = (0,0)
+
+    self.children = {} 
+    self.layer = deque([])
   
-    self.width = self.epd.height 
-    self.height = self.epd.width 
+  #----------------------------------------------
+  #  Bring child widget referenced by id to the
+  #  top of deque( 
+  #----------------------------------------------
+  def setFocus(self, child_id):
+    self
+    self.inFocus = True
 
-    self.clear()
+  #----------------------------------------------
+  #  Get root widget 
+  #----------------------------------------------
+  def getRoot(self):
+    parent = self.parent
+    while parent is not None:
+      parent = parent.parent
+    return parent
 
-  #---------------------------------------------------------------------------
-  #  Get a clean sheet 
-  #---------------------------------------------------------------------------
-  def clear(self):
-    self.epd.Clear(0xFF)
-
-  #---------------------------------------------------------------------------
-  #  Create a new sheet 
-  #---------------------------------------------------------------------------
-  def newSheet(self):
-    return Image.new('1', (self.width, self.height), 255)  
-
-  #---------------------------------------------------------------------------
-  #  Draw rectangle
-  #---------------------------------------------------------------------------
-  def drawRect(self, sheet, point, width, height, outline=0, fill=0):
-    draw = ImageDraw.Draw(sheet)
-    points = [point, (point[0]+width, point[1]+height)]
-    return draw.rectangle(points, outline=outline, fill=fill)
-
-  #---------------------------------------------------------------------------
-  #  Draw line
-  #---------------------------------------------------------------------------
-  def drawLine(self, sheet, points, fill=0, width=1): 
-    draw = ImageDraw.Draw(sheet)
-    return draw.line(points, fill=fill,width=width)
-
-  #---------------------------------------------------------------------------
-  #  Draw chord 
-  #---------------------------------------------------------------------------
-  def drawChord(self, sheet, point, width, height, start, end, outline=None, fill=None):
-    draw = ImageDraw.Draw(sheet)
-    points = [point, (point[0]+width, point[1]+height)]
-    return draw.chord(points, start, end, outline=outline, fill=fill)
-
-  #---------------------------------------------------------------------------
-  #  Draw ellipse 
-  #---------------------------------------------------------------------------
-  def drawEllipse(self, sheet, point, width, height, outline=0, fill=0):
-    draw = ImageDraw.Draw(sheet)
-    points = [point, (point[0]+width, point[1]+height)]
-    return draw.ellipse(points, outline=outline, fill=fill)
-
-  #---------------------------------------------------------------------------
-  #  Draw pie slice - outline 
-  #---------------------------------------------------------------------------
-  def drawPieSlice(self, sheet, point, width, height, start, end, outline=0, fill=0):
-    draw = ImageDraw.Draw(sheet)
-    points = [point, (point[0]+width, point[1]+height)]
-    draw.pieslice(points, start, end, outline=outline, fill=fill)
-
-  #---------------------------------------------------------------------------
-  #  Draw polygon - outline 
-  #---------------------------------------------------------------------------
-  def drawPolygon(self, sheet, vertices, outline=0, fill=0):
-    draw = ImageDraw.Draw(sheet)
-    draw.polygon(vertices, outline=outline, fill=fill)
-
-  #---------------------------------------------------------------------------
-  #  Draw text 
-  #---------------------------------------------------------------------------
-  def drawText(self, sheet, point, text, font, fill=0):
-    draw = ImageDraw.Draw(sheet)
-    draw.text(point, text, font=font, fill=fill)
-
-  #---------------------------------------------------------------------------
-  #  drawImage 
-  #---------------------------------------------------------------------------
-  def loadImage(self, file): 
-    return Image.open(file)
-
-  #---------------------------------------------------------------------------
-  #  Draw on top of the current image 
-  #---------------------------------------------------------------------------
-  def overlay(self, sheet, point, file):
-    img = self.loadImage(file)
-    sheet.paste(img, (point[1], point[0]))    
-
-  #---------------------------------------------------------------------------
-  #  Setup partial update with a given background image 
-  #---------------------------------------------------------------------------
-  def startPartial(self, bkgnd):
-    self.epd.init(self.epd.FULL_UPDATE)
-    self.epd.displayPartBaseImage(self.epd.getbuffer(bkgnd))
-    self.epd.init(self.epd.PART_UPDATE)
-
-  #---------------------------------------------------------------------------
-  #  End partial update with option to clear screen 
-  #---------------------------------------------------------------------------
-  def endPartial(self, clear=True):
-    self.epd.init(self.epd.FULL_UPDATE)
-    if clear:
-      self.clear()
-      
-  #---------------------------------------------------------------------------
-  #  Render the image 
-  #---------------------------------------------------------------------------
-  def render(self, sheet):
-    self.epd.display(self.epd.getbuffer(sheet))
-    # time.sleep(2)
-
-  #---------------------------------------------------------------------------
-  #  Render the image 
-  #---------------------------------------------------------------------------
-  def renderPartial(self, sheet):
-    self.epd.displayPartial(self.epd.getbuffer(sheet))
-    # time.sleep(2)
+  #----------------------------------------------
+  #  Returns the rendering context 
+  #----------------------------------------------
+  def getContext(self): 
+    root = self.getRoot()
+    page = None
+    if root is not None:
+      page = root.page 
+    return root.display, page
  
-  #---------------------------------------------------------------------------
-  #  Sleep the display  
-  #---------------------------------------------------------------------------
-  def sleep(self):
-    self.epd.sleep()
-    self.epd.Dev_exit()
+  #----------------------------------------------
+  #  Add a child widget; return child's id
+  #----------------------------------------------
+  def addChild(self, child):
+    child.id = getRoot().getId() 
+    self.children[child.id] = child 
+    return child.id
 
-  #---------------------------------------------------------------------------
-  #  Shutdown the display  
-  #---------------------------------------------------------------------------
-  def shutdown(self):
-    epd2in13_V2.epdconfig.module_exit()
-
- 
-  #---------------------------------------------------------------------------
-  #  Draw line
-  #---------------------------------------------------------------------------
-  def runTest(self):
-
+  #----------------------------------------------
+  #  Delete a child and its offsprings
+  #----------------------------------------------
+  def delChild(self, id) -> bool:
     try:
-      sheet = self.newSheet()
-      self.drawRect(sheet, point=(100,50), width=50, height=50, outline=0, fill=255)
-      self.drawRect(sheet, point=(50,25), width=50, height=100, outline=0, fill = 0)
-      self.drawLine(sheet, points=[(0,0),(50,50)], fill=0,width = 1)
-      self.drawLine(sheet, points=[(0,50),(50,25)], fill = 0,width = 1)
-      self.drawChord(sheet, point=(100, 0), width=80, height=40, start=0, end=300, fill = 0)
-      self.drawEllipse(sheet, point=(55, 60), width=60, height=40, outline=0, fill=255 )
-      self.drawPieSlice(sheet, point=(130, 55), width=50, height=50, start=90, end=180, outline=0, fill=0)
-      self.drawPieSlice(sheet, point=(130, 55), width=50, height=50, start=270, end=360, outline=0, fill=0)
-      self.drawPolygon(sheet, vertices=[(20,25),(110,50),(150,25)], outline=255, fill=0)
-      self.drawPolygon(sheet, vertices=[(190,0),(190,50),(150,25)], outline=255, fill=0)
-      self.drawText(sheet, point=(120, 60), text='e-Paper demo', font = self.font15, fill = 0)
-      self.drawText(sheet, point=(110, 90), text=u'微雪电子', font = self.font24, fill = 0)
-      self.render(sheet)
+      theChild = self.children[id]
+      for child in theChild.children:
+        theChild.delChild(child.id) 
+      del(theChild)
+      return True
+    except:
+      return False
 
-      # read bmp file 
-      sheet = self.loadImage(os.path.join(self.picdir, '2in13.bmp'))
-      self.render(sheet)
-    
-      # read bmp file on window
-      sheet = self.newSheet()
-      self.overlay(sheet, point=(2,2), file=os.path.join(self.picdir, 'qrcode.bmp'))
-      self.render(sheet)
+  #----------------------------------------------
+  #  Render API stub to be overridden
+  #----------------------------------------------
+  def render(self) -> bool:
+    return False 
 
-      # Partial update
-      sheet = self.newSheet()
-      self.startPartial(sheet)
-      num = 0
-      while (True): 
-        self.drawPieSlice(sheet, point=(120, 0), width=50, height=50, start=0, end=num*10, outline=0, fill=0)
-        self.drawRect(sheet, point=(120, 80), width=100, height=25, outline=0,fill=255)    
-        self.drawText(sheet, point=(120, 80), text=time.strftime('%H:%M:%S'), font=self.font24, fill=0)    
-        self.renderPartial(sheet)
-        time.sleep(1.0)
-        num = num + 1
-        print(f"num = {num}")
-
-        if (num == 100):
-          break
-      self.endPartial(clear=True)
-
-      print("Done!")
-
-      # sleep
-      self.sleep()
+  
+#-----------------------------------------------------------------------------
+#   Rect Widget
+#-----------------------------------------------------------------------------
+class Rect(Widget):
+  #----------------------------------------------
+  #  Constructor
+  #----------------------------------------------
+  def __init__(self):
+    Widget.__init__(self) 
+    self.margin = (2,2) 
+    self.outline = 0 
+    self.fill = 0 
  
-    except IOError as e:
-      print(e)
-    
-    except KeyboardInterrupt:    
-      print("ctrl + c:")
-      self.shutdown() 
+  #----------------------------------------------
+  #  Render function 
+  #----------------------------------------------
+  def render(self) -> bool:
+    display, page = self.getContext()
 
+    if (display is not None) and (page is not None):
+      w = self.dim[0]-2*self.margin[0] 
+      h = self.dim[1]-2*self.margin[1] 
+      if (w > 0) and (h > 0):
+        display.drawRect(page, self.pos, w, h, outline=self.outline, fill=self.fill)
+        return True
+
+    return False
+    
+ 
+#-----------------------------------------------------------------------------
+#   UI 
+#-----------------------------------------------------------------------------
+class UI(Widget):
+  #----------------------------------------------
+  #  Constructor
+  #----------------------------------------------
+  def __init__(self, display, btnFunc):
+    Widget.__init__(self) 
+    self.idgen = 0
+
+    self.classname = "root", 
+    parent = None, 
+    self.display = display
+    self.dim=(self.display.width, self.display.height) 
+    self.page = self.display.newSheet() 
+    self.btnFunc = btnFunc 
+     
+    self.mainThread = threading.Thread(target=self.mainLoop) 
+    self.mainThead.setDaemon(True)
+    self.exitLoop = False
+
+  #----------------------------------------------
+  #  Generate unique ID
+  #----------------------------------------------
+  def genId(self):
+    self.idgen = self.idgen + 1
+    return self.idgen
+
+  #----------------------------------------------
+  #  Add rectangle
+  #----------------------------------------------
+  def addRect(self, pos, dim, outline=1, fill=0) -> Rect:
+    rect = Rect()
+    rect.dim = dim
+    rect.pos = pos
+    rect.outline = outline
+    rect.fill = fill
+    addChild(rect)
+    return rect
+ 
+  #----------------------------------------------
+  #  Render 
+  #----------------------------------------------
+  def render(self):
+    for child in self.children:
+      child.render() 
+ 
+  #----------------------------------------------
+  #  Dispatch based on buttun press
+  #
+  #  single - navigate to next widget
+  #  long   - select current widget
+  #  double - reserved 
+  #----------------------------------------------
+  def dispatch(self, btnPress):
+    if btnPress == "none":
+      return
+
+    if btnPress == "single":
+      pass 
+    elif btnPress == "long":
+      pass 
+    elif btnPress == "double":
+      pass 
+ 
+  #----------------------------------------------
+  #  UI main loop 
+  #----------------------------------------------
+  def mainLoop(self):
+    self.render()
+    while not self.exitLoop:
+        btnPress = self.btnFunc()
+        self.dispatch(btnPress)
+        time.sleep(0.1)
+       
+  #----------------------------------------------
+  #  Start UI  
+  #----------------------------------------------
+  def start(self):
+    self.mainThread.start()
+
+  #----------------------------------------------
+  #  Stop UI  
+  #----------------------------------------------
+  def stop(self):
+    self.exitLoop = True
+    self.mainThread.join()
+ 
 #-----------------------------------------------------------------------------
 #  main()
 #-----------------------------------------------------------------------------
 def main():
-  display = ePaper()
-  print(f"Display (WxH) is {display.width}x{display.height}")
-  display.runTest()
+  pisugar = PiSugar2()
+  paper = ePaper()
+  ui = UI(paper, pisugar.get_button_press)
+  display = ui.display
+  dim = ui.dim
+  print(f"Display (WxH) is {dim[0]}x{dim[1]}")
+
+  rect = Rect()
+  rect.dim = (20, 20)
+  rect.pos = (20, 20)
+  rc = rect.render()
+  # display.runTest()
  
 if __name__=='__main__':
   main()
