@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+
 #=============================================================================
 #
 #  ui.py
@@ -22,10 +23,11 @@
 import sys
 import os
 import time
+import threading
+from collections import deque
 from PIL import Image,ImageDraw,ImageFont
 from ePaper import ePaper 
 from PiSugar2 import PiSugar2 
-
 
 #-----------------------------------------------------------------------------
 #   Widget 
@@ -42,25 +44,28 @@ class Widget:
     self.dim = (0,0) 
     self.pos = (0,0)
 
+    # Dict of child
     self.children = {} 
-    self.layer = deque([])
   
+    # Rendering layer - last one is on top
+    self.layer = deque([])
+ 
   #----------------------------------------------
-  #  Bring child widget referenced by id to the
-  #  top of deque( 
+  #  Bring to the top child referenced by id
   #----------------------------------------------
-  def setFocus(self, child_id):
-    self
-    self.inFocus = True
+  def setFocus(self, id):
+    child = self.children[id]
+    self.layer.remove(child.id)
+    self.layer.append(child.id) 
 
   #----------------------------------------------
   #  Get root widget 
   #----------------------------------------------
   def getRoot(self):
-    parent = self.parent
-    while parent is not None:
-      parent = parent.parent
-    return parent
+    child = self
+    while child.parent is not None:
+      child = child.parent
+    return child 
 
   #----------------------------------------------
   #  Returns the rendering context 
@@ -76,23 +81,54 @@ class Widget:
   #  Add a child widget; return child's id
   #----------------------------------------------
   def addChild(self, child):
-    child.id = getRoot().getId() 
+    child.id = self.getRoot().genId() 
+    child.parent = self
     self.children[child.id] = child 
+    self.layer.append(child.id)
     return child.id
 
   #----------------------------------------------
   #  Delete a child and its offsprings
   #----------------------------------------------
   def delChild(self, id) -> bool:
+
     try:
+
       theChild = self.children[id]
+
+      # Transfer focus 
+      if theChild.inFocus: 
+        i = self.layer.index(theChild.id)
+        if i > 0:
+          self.setFocus(self.layer[i-1])
+        elif len(self.layer) > 0:
+          self.setFocus(self.layer[i+1])
+ 
+      # Delete the child's offspring   
+      rc = True
       for child in theChild.children:
-        theChild.delChild(child.id) 
+        rc = rc and theChild.delChild(child.id) 
+
+      # Finally delete the child
       del(theChild)
-      return True
+
+      return rc 
+
     except:
+
       return False
 
+  #----------------------------------------------
+  #  Render API stub to be overridden
+  #----------------------------------------------
+  def renderChildren(self):
+    rc = True
+    for i in range(len(self.layer)):
+      child_id = self.layer[i]
+      rc = rc and self.children[child_id].render()
+
+    return rc
+ 
   #----------------------------------------------
   #  Render API stub to be overridden
   #----------------------------------------------
@@ -117,6 +153,9 @@ class Rect(Widget):
   #  Render function 
   #----------------------------------------------
   def render(self) -> bool:
+    self.renderChildren()
+    print("render Rect")
+
     display, page = self.getContext()
 
     if (display is not None) and (page is not None):
@@ -148,7 +187,7 @@ class UI(Widget):
     self.btnFunc = btnFunc 
      
     self.mainThread = threading.Thread(target=self.mainLoop) 
-    self.mainThead.setDaemon(True)
+    self.mainThread.setDaemon(True)
     self.exitLoop = False
 
   #----------------------------------------------
@@ -174,8 +213,10 @@ class UI(Widget):
   #  Render 
   #----------------------------------------------
   def render(self):
-    for child in self.children:
-      child.render() 
+    self.renderChildren()
+    self.display.render(self.page)
+
+    print("render UI")
  
   #----------------------------------------------
   #  Dispatch based on buttun press
@@ -187,23 +228,24 @@ class UI(Widget):
   def dispatch(self, btnPress):
     if btnPress == "none":
       return
-
-    if btnPress == "single":
-      pass 
+    elif btnPress == "single":
+      print(f"single")
     elif btnPress == "long":
-      pass 
+      print(f"long")
     elif btnPress == "double":
-      pass 
+      print(f"double")
  
   #----------------------------------------------
   #  UI main loop 
   #----------------------------------------------
   def mainLoop(self):
+    self.build()
     self.render()
+    self.exitLoop = False
     while not self.exitLoop:
         btnPress = self.btnFunc()
         self.dispatch(btnPress)
-        time.sleep(0.1)
+        time.sleep(0.05)
        
   #----------------------------------------------
   #  Start UI  
@@ -217,6 +259,19 @@ class UI(Widget):
   def stop(self):
     self.exitLoop = True
     self.mainThread.join()
+
+    # Remove all children
+    for child in self.children:
+      self.delChild(child.id)
+
+  #----------------------------------------------
+  #  Build the client area 
+  #----------------------------------------------
+  def build(self):
+    rect = Rect()
+    rect.dim = (20, 20)
+    rect.pos = (20, 20)
+    self.addChild(rect)
  
 #-----------------------------------------------------------------------------
 #  main()
@@ -225,15 +280,10 @@ def main():
   pisugar = PiSugar2()
   paper = ePaper()
   ui = UI(paper, pisugar.get_button_press)
-  display = ui.display
-  dim = ui.dim
-  print(f"Display (WxH) is {dim[0]}x{dim[1]}")
+  ui.start()
 
-  rect = Rect()
-  rect.dim = (20, 20)
-  rect.pos = (20, 20)
-  rc = rect.render()
-  # display.runTest()
+  while True:
+    time.sleep(2.0) 
  
 if __name__=='__main__':
   main()
