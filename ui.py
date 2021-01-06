@@ -43,26 +43,43 @@ from ePaper import ePaper
 from PiSugar2 import PiSugar2 
 
 #-----------------------------------------------------------------------------
+#  Return truetype font of given size
+#-----------------------------------------------------------------------------
+def TTFont(sz=15):
+  picdir = "./pic"
+  return ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), sz)
+
+#-----------------------------------------------------------------------------
+#  Return color value 
+#-----------------------------------------------------------------------------
+class Color():
+  black = 0 
+  white = 255 
+ 
+#-----------------------------------------------------------------------------
 #   Widget 
 #-----------------------------------------------------------------------------
 class Widget:
+
   #----------------------------------------------
   #  Constructor 
   #----------------------------------------------
   def __init__(self):
     self.parent = None
-    self.classname = "" 
+    self.cname = "Widget" 
     self.id = -1 
     self.parent = None 
     self.dim = (0,0) 
     self.pos = (0,0)
+    self.isSelectable = False 
 
     # Dict of child
     self.children = {} 
   
-    # Rendering layer - last one is on top
+    # Rendering layer; child last in queue
+    # is the focused child 
     self.layer = deque([])
- 
+
   #----------------------------------------------
   #  onCreate stub - called when the widget
   #  is created by the parent
@@ -107,7 +124,7 @@ class Widget:
     n = len(self.layer)
     if n > 0:
       i = self.layer[n-1]
-      if not self.children[i].isSelectable:
+      if self.children[i].isSelectable:
         id = i
 
     return id
@@ -119,10 +136,13 @@ class Widget:
   def setNextFocus(self):
     count = 0
     n = len(self.layer)
+    print(f"{self.cname} has {n} layers")
+
     prev_id = self.currFocusId() 
     while n > 0 and count < n:
       self.layer.rotate(1)
       id = self.currFocusId() 
+      print(f"{self.cname} child[{id}]")
       if id != -1:  
         if prev_id != -1:
           self.children[prev_id].onDeFocus()
@@ -130,6 +150,17 @@ class Widget:
         return id  
     return -1
 
+  #----------------------------------------------
+  #  Select a child by calling its onSelect
+  #  Returns False if id is invalid or child's
+  #  onSelect returns false  
+  #----------------------------------------------
+  def select(self, id):
+    rc = False
+    if id != -1:
+      rc = self.children[id].onSelect() 
+    return rc
+ 
   #----------------------------------------------
   #  Get root widget 
   #----------------------------------------------
@@ -170,7 +201,7 @@ class Widget:
     try:
       theChild = self.children[id]
 
-      if id == self.focusedId():
+      if id == self.currFocusId():
         if i > 0:
           self.setFocus(self.layer[i-1])
         elif len(self.layer) > 0:
@@ -220,9 +251,10 @@ class Rect(Widget):
   #----------------------------------------------
   def __init__(self):
     Widget.__init__(self) 
+    self.cname = "Rect"
     self.margin = (2,2) 
-    self.outline = 0 
-    self.fill = 0 
+    self.outline = Color.black 
+    self.fill = Color.white 
  
   #----------------------------------------------
   #  Render function 
@@ -238,9 +270,42 @@ class Rect(Widget):
         display.drawRect(page, self.pos, w, h, outline=self.outline, fill=self.fill)
         return True
 
-    self.renderChildren()
+    # self.renderChildren()
     return False
-    
+
+#-----------------------------------------------------------------------------
+#   TextBox Widget
+#-----------------------------------------------------------------------------
+class TextBox(Widget):
+  def __init__(self):
+    Widget.__init__(self) 
+    self.cname = "TextBox"
+    self.margin = (0,0)
+    self.outline = Color.black 
+    self.fill = Color.white 
+
+    self.text_margin = (2,2)
+    self.title = ""
+    self.font = TTFont(15)
+    self.textColor = Color.black 
+
+  def render(self) -> bool:
+    print("render TextBox")
+    display, page = self.getContext()
+    if (display is not None) and (page is not None):
+      w = self.dim[0]-2*self.margin[0]
+      h = self.dim[1]-2*self.margin[1]
+      if (w > 0) and (h > 0):
+        display.drawRect(page, self.pos, w, h, outline=self.outline, fill=self.fill)
+        tw = w - 2*self.text_margin[0]
+        th = h - 2*self.text_margin[1] 
+        if (tw > 0) and (th > 0):
+          display.drawText(page, self.pos, self.title, font=self.font, fill=self.textColor)
+          return True
+
+    # self.renderChildren()
+    return False
+
  
 #-----------------------------------------------------------------------------
 #   UI 
@@ -253,8 +318,8 @@ class UI(Widget):
     Widget.__init__(self) 
     self.idgen = 0
 
-    self.classname = "root", 
-    parent = None, 
+    self.cname = "Root"
+    parent = None 
     self.display = display
     self.dim=(self.display.width, self.display.height) 
     self.page = self.display.newSheet() 
@@ -272,37 +337,58 @@ class UI(Widget):
     return self.idgen
 
   #----------------------------------------------
-  #  Add rectangle
+  #  Add rectangle 
+  #  Returns the rect instance 
   #----------------------------------------------
-  def addRect(self, pos, dim, outline=1, fill=0) -> Rect:
+  def addRect(self, pos, dim, outline=1, fill=0):
     rect = Rect()
     rect.dim = dim
     rect.pos = pos
     rect.outline = outline
     rect.fill = fill
-    addChild(rect)
+    self.addChild(rect)
     return rect
- 
+
+  #----------------------------------------------
+  #  Add textbox 
+  #  Returns the text instance
+  #----------------------------------------------
+  def addTextBox(self, pos, dim, title="", font=TTFont(15), 
+                         textColor=0, outline=0, fill=255):
+    textBox = TextBox()
+    textBox.dim = dim
+    textBox.pos = pos
+    textBox.outline = outline
+    textBox.fill = fill
+    textBox.textColor = textColor
+    textBox.title = title
+    textBox.font = font
+    self.addChild(textBox)
+
+    return textBox
+
   #----------------------------------------------
   #  Render 
   #----------------------------------------------
   def render(self):
-    self.display.render(self.page)
-    self.display.startPartial(self.page) 
     self.renderChildren()
-
+    self.display.renderPartial(self.page)
     print("render UI")
  
   #----------------------------------------------
   #  UI main loop 
   #----------------------------------------------
   def mainLoop(self):
+    self.display.startPartial(self.page) 
+
     self.render()
     self.exitLoop = False
     while not self.exitLoop:
         btnPress = self.btnFunc()
         self.dispatch(btnPress)
         time.sleep(0.05)
+
+    self.display.endPartial(self.page) 
        
   #----------------------------------------------
   #  Start UI  
@@ -331,10 +417,17 @@ class UI(Widget):
   def dispatch(self, btnPress):
     if btnPress == "none":
       return
+
     elif btnPress == "single":
       print(f"single")
+      id = self.setNextFocus()
+      print(f"Focused child #{id}")
+
     elif btnPress == "long":
       print(f"long")
+      id = self.select(self.currFocusId())
+      print(f"Selected child #{id}")
+
     elif btnPress == "double":
       print(f"double")
 
@@ -346,6 +439,17 @@ def main():
   pisugar = PiSugar2()
   paper = ePaper()
   ui = UI(paper, pisugar.get_button_press)
+
+  # Add components to UI
+  rect = ui.addRect(pos=(20,20), dim=(20,30), outline=Color.black, fill=Color.white)
+  rect.isSelectable = True
+  print(f"Rect id = {rect.id}")
+
+  tbox = ui.addTextBox(pos=(50, 20), dim=(40, 20), title="Hello", font=TTFont(20), 
+                 textColor=Color.black, outline=Color.black, fill=Color.white)
+  tbox.isSelectable = True
+  print(f"tbox id = {tbox.id}")
+
   ui.start()
 
   while True:
