@@ -19,6 +19,19 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 #
+#  Description:
+#
+#  The UI system is built on widgets, each derived from the Widget class.
+#  Here are the properties of a Widget:
+#
+#   - Root widget is the most sensior parent
+#   - Widget draws to the screen through render() method
+#   - Widget reacts to events through dispatch() method
+#   - Widget dispatches
+#   - Widget can embed children Widgets 
+#   - Widget renders self first then render its children 
+#   - Widget react to event first then render its children 
+#
 #=============================================================================
 import sys
 import os
@@ -51,12 +64,71 @@ class Widget:
     self.layer = deque([])
  
   #----------------------------------------------
-  #  Bring to the top child referenced by id
+  #  onCreate stub - called when the widget
+  #  is created by the parent
   #----------------------------------------------
-  def setFocus(self, id):
-    child = self.children[id]
-    self.layer.remove(child.id)
-    self.layer.append(child.id) 
+  def onCreate(self):
+    return False 
+
+  #----------------------------------------------
+  #  onDestroy stub - called when the widget
+  #  is deleted by the parent
+  #----------------------------------------------
+  def onDestroy(self):
+    return False 
+
+  #----------------------------------------------
+  #  onSelect stub - called when the widget is
+  #  in focus and selected by a long press 
+  #----------------------------------------------
+  def onSelect(self):
+    return False 
+
+  #----------------------------------------------
+  #  onFocus stub - called right before the 
+  #  widget gains focus (top of the display)
+  #----------------------------------------------
+  def onFocus(self):
+    return False 
+
+  #----------------------------------------------
+  #  onDestroy stub - called right before the 
+  #  widget loses its focus 
+  #----------------------------------------------
+  def onDeFocus(self):
+    return False 
+
+  #----------------------------------------------
+  #  Return the id of the focused child
+  #  Returns -1 if no child is in focus
+  #----------------------------------------------
+  def currFocusId(self):
+    id = -1
+    n = len(self.layer)
+    if n > 0:
+      i = self.layer[n-1]
+      if not self.children[i].isSelectable:
+        id = i
+
+    return id
+
+  #----------------------------------------------
+  #  Return the id of next focusable child.
+  #  Returns -1 if none found 
+  #----------------------------------------------
+  def setNextFocus(self):
+    count = 0
+    n = len(self.layer)
+    prev_id = self.currFocusId() 
+    while n > 0 and count < n:
+      self.layer.rotate(1)
+      id = self.currFocusId() 
+      if id != -1:  
+        if prev_id != -1:
+          self.children[prev_id].onDeFocus()
+        self.children[id].onFocus() 
+        return id  
+    return -1
 
   #----------------------------------------------
   #  Get root widget 
@@ -85,20 +157,20 @@ class Widget:
     child.parent = self
     self.children[child.id] = child 
     self.layer.append(child.id)
+    child.onCreate()
     return child.id
 
   #----------------------------------------------
-  #  Delete a child and its offsprings
+  #  Delete a child and its offsprings.  If the
+  #  child to be deleted is is in-focus, the next 
+  #  child is given focus; otherwise parent 
+  #  retains the focus
   #----------------------------------------------
   def delChild(self, id) -> bool:
-
     try:
-
       theChild = self.children[id]
 
-      # Transfer focus 
-      if theChild.inFocus: 
-        i = self.layer.index(theChild.id)
+      if id == self.focusedId():
         if i > 0:
           self.setFocus(self.layer[i-1])
         elif len(self.layer) > 0:
@@ -108,6 +180,9 @@ class Widget:
       rc = True
       for child in theChild.children:
         rc = rc and theChild.delChild(child.id) 
+
+      # Call onDestroy
+      theChild.onDestroy()
 
       # Finally delete the child
       del(theChild)
@@ -153,11 +228,9 @@ class Rect(Widget):
   #  Render function 
   #----------------------------------------------
   def render(self) -> bool:
-    self.renderChildren()
     print("render Rect")
 
     display, page = self.getContext()
-
     if (display is not None) and (page is not None):
       w = self.dim[0]-2*self.margin[0] 
       h = self.dim[1]-2*self.margin[1] 
@@ -165,6 +238,7 @@ class Rect(Widget):
         display.drawRect(page, self.pos, w, h, outline=self.outline, fill=self.fill)
         return True
 
+    self.renderChildren()
     return False
     
  
@@ -213,33 +287,16 @@ class UI(Widget):
   #  Render 
   #----------------------------------------------
   def render(self):
-    self.renderChildren()
     self.display.render(self.page)
+    self.display.startPartial(self.page) 
+    self.renderChildren()
 
     print("render UI")
- 
-  #----------------------------------------------
-  #  Dispatch based on buttun press
-  #
-  #  single - navigate to next widget
-  #  long   - select current widget
-  #  double - reserved 
-  #----------------------------------------------
-  def dispatch(self, btnPress):
-    if btnPress == "none":
-      return
-    elif btnPress == "single":
-      print(f"single")
-    elif btnPress == "long":
-      print(f"long")
-    elif btnPress == "double":
-      print(f"double")
  
   #----------------------------------------------
   #  UI main loop 
   #----------------------------------------------
   def mainLoop(self):
-    self.build()
     self.render()
     self.exitLoop = False
     while not self.exitLoop:
@@ -265,14 +322,23 @@ class UI(Widget):
       self.delChild(child.id)
 
   #----------------------------------------------
-  #  Build the client area 
+  #  Dispatch based on buttun press
+  #
+  #  single - navigate to next widget
+  #  long   - select current widget
+  #  double - reserved
   #----------------------------------------------
-  def build(self):
-    rect = Rect()
-    rect.dim = (20, 20)
-    rect.pos = (20, 20)
-    self.addChild(rect)
- 
+  def dispatch(self, btnPress):
+    if btnPress == "none":
+      return
+    elif btnPress == "single":
+      print(f"single")
+    elif btnPress == "long":
+      print(f"long")
+    elif btnPress == "double":
+      print(f"double")
+
+
 #-----------------------------------------------------------------------------
 #  main()
 #-----------------------------------------------------------------------------
