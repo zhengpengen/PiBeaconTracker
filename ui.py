@@ -136,13 +136,10 @@ class Widget:
   def setNextFocus(self):
     count = 0
     n = len(self.layer)
-    print(f"{self.cname} has {n} layers")
-
     prev_id = self.currFocusId() 
     while n > 0 and count < n:
       self.layer.rotate(1)
       id = self.currFocusId() 
-      print(f"{self.cname} child[{id}]")
       if id != -1:  
         if prev_id != -1:
           self.children[prev_id].onDeFocus()
@@ -270,8 +267,6 @@ class Rect(Widget):
   #  render() 
   #----------------------------------------------
   def render(self):
-    print("render Rect")
-
     display, page = self.getContext()
     if (display is not None) and (page is not None):
       w = self.dim[0]-2*self.margin[0] 
@@ -288,9 +283,7 @@ class Rect(Widget):
   #  onFocus 
   #----------------------------------------------
   def onFocus(self): 
-    print(f"{self.id} {self.cname}: onFocus before {self.fill}")
     self.fill = self.invert(color=self.fill)
-    print(f"{self.id} {self.cname}: onFocus after {self.fill}")
     self.render()
 
 
@@ -298,9 +291,7 @@ class Rect(Widget):
   #  onDeFocus 
   #----------------------------------------------
   def onDeFocus(self):
-    print(f"{self.id} {self.cname}: onDeFocus before {self.fill}")
     self.fill = self.invert(color=self.fill)
-    print(f"{self.id} {self.cname}: onDeFocus after  {self.fill}")
     self.render()
 
 #-----------------------------------------------------------------------------
@@ -313,12 +304,10 @@ class TextBox(Widget):
   def __init__(self):
     Widget.__init__(self) 
     self.cname = "TextBox"
-    self.margin = (0,0)
+    self.margin = (2,2)
     self.outline = Color.black 
     self.fill = Color.white 
-
-    self.text_margin = (2,2)
-    self.title = ""
+    self.text = ""
     self.font = TTFont(15)
     self.textColor = Color.black 
 
@@ -326,19 +315,13 @@ class TextBox(Widget):
   #  render
   #----------------------------------------------
   def render(self):
-    print("render TextBox")
     display, page = self.getContext()
     if (display is not None) and (page is not None):
-      w = self.dim[0]-2*self.margin[0]
-      h = self.dim[1]-2*self.margin[1]
-      if (w > 0) and (h > 0):
-        display.drawRect(page, self.pos, w, h, outline=self.outline, fill=self.fill)
-        tw = w - 2*self.text_margin[0]
-        th = h - 2*self.text_margin[1] 
-        if (tw > 0) and (th > 0):
-          pos = (self.pos[0] + self.text_margin[0], self.pos[1] + self.text_margin[1])
-          display.drawText(page, pos, self.title, font=self.font, fill=self.textColor)
-          return True
+      display.drawRect(page, self.pos, self.dim[0], self.dim[1], 
+                       outline=self.outline, fill=self.fill)
+      pos = (self.pos[0] + self.margin[0], self.pos[1] + self.margin[1])
+      display.drawText(page, pos, self.text, font=self.font, fill=self.textColor)
+      return True
 
     # self.renderChildren()
     return False
@@ -347,22 +330,63 @@ class TextBox(Widget):
   #  onFocus 
   #----------------------------------------------
   def onFocus(self): 
-    print(f"{self.id} {self.cname}: onFocus before {self.fill} {self.textColor}")
     self.fill = self.invert(self.fill)
     self.textColor = self.invert(self.textColor)
-    print(f"{self.id} {self.cname}: onFocus after  {self.fill} {self.textColor}")
     self.render()
+    return True
  
   #----------------------------------------------
   #  onDeFocus 
   #----------------------------------------------
   def onDeFocus(self): 
-    print(f"{self.id} {self.cname}: onDeFocus before {self.fill} {self.textColor}")
     self.fill = self.invert(self.fill)
     self.textColor = self.invert(self.textColor)
-    print(f"{self.id} {self.cname}: onDeFocus after {self.fill} {self.textColor}")
     self.render()
+    return True
+ 
 
+'''
+#-----------------------------------------------------------------------------
+#   ImageBox 
+#-----------------------------------------------------------------------------
+class ImageBox(Widget):
+  #----------------------------------------------
+  #  Constructor
+  #----------------------------------------------
+  def __init__(self):
+    Widget.__init__(self)
+    self.cname = "ImageBox"
+    self.margin = (0,0)
+    self.outline = Color.black
+    self.fill = Color.white
+    self.imageFile = ""
+
+  #----------------------------------------------
+  #  render
+  #----------------------------------------------
+  def render(self):
+    display, page = self.getContext()
+    if (display is not None) and (page is not None):
+      display.overlay(page, pos, file=self.imageFile)
+      return True
+
+    # self.renderChildren()
+    return False
+
+  #----------------------------------------------
+  #  onFocus 
+  #----------------------------------------------
+  def onFocus(self):
+    self.render()
+    return
+
+  #----------------------------------------------
+  #  onDeFocus 
+  #----------------------------------------------
+  def onDeFocus(self):
+    return
+
+'''
 
 #-----------------------------------------------------------------------------
 #   UI 
@@ -410,7 +434,7 @@ class UI(Widget):
   #  Add textbox 
   #  Returns the text instance
   #----------------------------------------------
-  def addTextBox(self, pos, dim, title="", font=TTFont(15), 
+  def addTextBox(self, pos, dim, text="", font=TTFont(15), 
          textColor=Color.black, outline=Color.black, fill=Color.white):
     textBox = TextBox()
     textBox.dim = dim
@@ -418,7 +442,7 @@ class UI(Widget):
     textBox.outline = outline
     textBox.fill = fill
     textBox.textColor = textColor
-    textBox.title = title
+    textBox.text = text 
     textBox.font = font
     self.addChild(textBox)
 
@@ -430,7 +454,6 @@ class UI(Widget):
   def render(self):
     self.renderChildren()
     self.display.renderPartial(self.page)
-    print("render UI")
  
   #----------------------------------------------
   #  UI main loop 
@@ -442,7 +465,6 @@ class UI(Widget):
     self.exitLoop = False
 
     curr_id = self.currFocusId() 
-    print(f"currFocusId = {curr_id}")
     self.children[curr_id].onFocus()
     self.render()
 
@@ -481,22 +503,18 @@ class UI(Widget):
     if btnPress == "none":
       return
 
+    elif btnPress == "double":
+      return 
+
     elif btnPress == "single":
-      print(f"single")
       id = self.setNextFocus()
       self.render()
-      curr_id = self.currFocusId() 
-      print(f"currFocusId = {curr_id}")
 
     elif btnPress == "long":
-      print(f"long")
       id = self.select(self.currFocusId())
       self.render()
-      print(f"Selected child #{id}")
 
-    elif btnPress == "double":
-      print(f"double")
-
+    return
 
 #-----------------------------------------------------------------------------
 #  main()
@@ -507,16 +525,19 @@ def main():
   ui = UI(paper, pisugar.get_button_press)
 
   # Layer up components
-  tbox3 = ui.addTextBox(pos=(115, 20), dim=(60, 20), title="Search", font=TTFont(20), 
+  tbox3 = ui.addTextBox(pos=(90, 40), dim=(66, 30), text="Search", font=TTFont(20), 
                  textColor=Color.black, outline=Color.black, fill=Color.white)
+  tbox3.text_margin = (5,5)
   tbox3.isSelectable = True
 
-  tbox2 = ui.addTextBox(pos=(60, 20), dim=(50, 20), title="Edit", font=TTFont(20), 
+  tbox2 = ui.addTextBox(pos=(60, 30), dim=(50, 30), text="Edit", font=TTFont(20), 
                  textColor=Color.black, outline=Color.black, fill=Color.white)
+  tbox2.text_margin = (5,5)
   tbox2.isSelectable = True
 
-  tbox1 = ui.addTextBox(pos=(5, 20), dim=(50, 20), title="File", font=TTFont(20), 
+  tbox1 = ui.addTextBox(pos=(5, 30), dim=(50, 30), text="File", font=TTFont(20), 
                  textColor=Color.black, outline=Color.black, fill=Color.white)
+  tbox1.text_margin = (5,5)
   tbox1.isSelectable = True
 
   ui.start()
