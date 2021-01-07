@@ -345,7 +345,6 @@ class TextBox(Widget):
     return True
  
 
-'''
 #-----------------------------------------------------------------------------
 #   ImageBox 
 #-----------------------------------------------------------------------------
@@ -367,7 +366,7 @@ class ImageBox(Widget):
   def render(self):
     display, page = self.getContext()
     if (display is not None) and (page is not None):
-      display.overlay(page, pos, file=self.imageFile)
+      display.overlay(page, self.pos, file=self.imageFile)
       return True
 
     # self.renderChildren()
@@ -386,7 +385,6 @@ class ImageBox(Widget):
   def onDeFocus(self):
     return
 
-'''
 
 #-----------------------------------------------------------------------------
 #   UI 
@@ -449,6 +447,17 @@ class UI(Widget):
     return textBox
 
   #----------------------------------------------
+  #  Add ImageBox
+  #----------------------------------------------
+  def addImageBox(self, pos, file):
+    imageBox = ImageBox()
+    imageBox.imageFile = file
+    imageBox.pos = pos
+    self.addChild(imageBox)
+  
+    return imageBox
+
+  #----------------------------------------------
   #  Render 
   #----------------------------------------------
   def render(self):
@@ -474,12 +483,14 @@ class UI(Widget):
       time.sleep(0.05)
 
     self.display.endPartial(self.page) 
-       
+      
+ 
   #----------------------------------------------
   #  Start UI  
   #----------------------------------------------
   def start(self):
     self.mainThread.start()
+
 
   #----------------------------------------------
   #  Stop UI  
@@ -491,6 +502,7 @@ class UI(Widget):
     # Remove all children
     for child in self.children:
       self.delChild(child.id)
+
 
   #----------------------------------------------
   #  Dispatch based on buttun press
@@ -525,6 +537,8 @@ def main():
   ui = UI(paper, pisugar.get_button_press)
 
   # Layer up components
+  ibox1 = ui.addImageBox(pos=(2,120), file="./pic/qrcode.bmp") 
+
   tbox3 = ui.addTextBox(pos=(90, 40), dim=(66, 30), text="Search", font=TTFont(20), 
                  textColor=Color.black, outline=Color.black, fill=Color.white)
   tbox3.text_margin = (5,5)
