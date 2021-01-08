@@ -550,6 +550,30 @@ class UI(Widget):
 
 #-----------------------------------------------------------------------------
 #  main()
+#
+#  Below is example of how different kinds of widgets can be added to UI.  
+# 
+#  == Rendering ==
+#
+#  The order in which the widgets are added matters.  Widget are added in
+#  layers; currently with one widget per layer. During rendering, the first
+#  layer is at the bottom, and last layer is at the top. 
+#  will be in focus by default; however, initial focus can be set to any
+#  widget by setting the 'initialFocusId'.
+#
+#  == Focusing ==
+#
+#  Focus brings a widget (layer) to the top in full view.  Only selectable 
+#  widgets will be eligible to receive focus. A widget can be made selectable
+#  by setting the 'isSelectabled" to True.  
+
+#  == Inputs ==
+#
+#  Single press will cycle through the widgets in order that they were added, 
+#  starting with the widget with the initial focus.  
+#
+#  Long press will invoke the onSelect() method of the widget in focus  
+#
 #-----------------------------------------------------------------------------
 def main():
   pisugar = PiSugar2()
