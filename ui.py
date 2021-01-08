@@ -130,6 +130,23 @@ class Widget:
     return id
 
   #----------------------------------------------
+  #  Set focus on a child given id
+  #----------------------------------------------
+  def setFocus(self, child_id):
+    count = 0
+    n = len(self.layer)
+    prev_id = self.currFocusId()
+    while n > 0 and count < n:
+      self.layer.rotate(1)
+      id = self.currFocusId()
+      if id == child_id and self.children[id].isSelectable:
+        if prev_id != -1:
+          self.children[prev_id].onDeFocus()
+        self.children[id].onFocus()
+        return id
+    return -1
+        
+  #----------------------------------------------
   #  Return the id of next focusable child.
   #  Returns -1 if none found 
   #----------------------------------------------
@@ -140,7 +157,7 @@ class Widget:
     while n > 0 and count < n:
       self.layer.rotate(1)
       id = self.currFocusId() 
-      if id != -1:  
+      if id != -1 and self.children[id].isSelectable:  
         if prev_id != -1:
           self.children[prev_id].onDeFocus()
         self.children[id].onFocus() 
@@ -396,6 +413,7 @@ class UI(Widget):
   def __init__(self, display, btnFunc):
     Widget.__init__(self) 
     self.idgen = 0
+    self.firstFocusId = -1
 
     self.cname = "Root"
     parent = None 
@@ -473,8 +491,10 @@ class UI(Widget):
     self.render()
     self.exitLoop = False
 
-    curr_id = self.currFocusId() 
-    self.children[curr_id].onFocus()
+    if self.firstFocusId == -1:
+      print("Please select the initial widget to focus")
+      return
+    self.setFocus(self.firstFocusId)
     self.render()
 
     while not self.exitLoop:
@@ -554,6 +574,10 @@ def main():
   tbox1.text_margin = (5,5)
   tbox1.isSelectable = True
 
+
+  ibox2 = ui.addImageBox(pos=(2,2), file="./pic/qrcode.bmp") 
+
+  ui.firstFocusId = tbox1.id 
   ui.start()
 
   while True:

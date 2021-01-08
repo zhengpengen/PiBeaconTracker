@@ -116,11 +116,24 @@ class ePaper:
     draw = ImageDraw.Draw(sheet)
     draw.text(point, text, font=font, fill=fill)
 
+
   #---------------------------------------------------------------------------
-  #  drawImage 
+  #  Draw imae
+  #---------------------------------------------------------------------------
+  def drawImage(self, sheet, point, image):
+    #draw = ImageDraw.Draw(sheet)
+    #draw.bitmap(point, image)
+    w, h = image.size 
+    points = (point[0], point[1], point[0]+w, point[1]+h)
+    print(f"Image.size = {image.size}")
+    print(f"points = {points}")
+    sheet.paste(image, points )
+
+  #---------------------------------------------------------------------------
+  #  load an Image 
   #---------------------------------------------------------------------------
   def loadImage(self, file): 
-    return Image.open(file)
+    return Image.open(file).convert("RGBA")
 
   #---------------------------------------------------------------------------
   #  Draw on top of the current image 
@@ -179,6 +192,8 @@ class ePaper:
   def runTest(self):
 
     try:
+
+      '''
       sheet = self.newSheet()
       self.drawRect(sheet, point=(100,50), width=50, height=50, outline=0, fill=255)
       self.drawRect(sheet, point=(50,25), width=50, height=100, outline=0, fill = 0)
@@ -200,9 +215,16 @@ class ePaper:
     
       # read bmp file on window
       sheet = self.newSheet()
-      self.overlay(sheet, point=(2,2), file=os.path.join(self.picdir, 'qrcode.bmp'))
+      self.overlay(sheet, point=(2, 2), file=os.path.join(self.picdir, 'qrcode.bmp'))
+      self.render(sheet)
+      '''
+
+      sheet = self.newSheet()
+      bmp = self.loadImage("./pic/qrcode.bmp")
+      self.drawImage(sheet, point=(0,0), image=bmp)
       self.render(sheet)
 
+      ''' 
       # Partial update
       sheet = self.newSheet()
       self.startPartial(sheet)
@@ -218,7 +240,13 @@ class ePaper:
 
         if (num == 100):
           break
+
+      bmp = self.loadImage("./pic/qrcode.bmp")
+      self.drawImage(sheet, point=(0,0), image=bmp)
+
       self.endPartial(clear=True)
+
+      ''' 
 
       print("Done!")
 

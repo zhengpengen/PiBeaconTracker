@@ -521,8 +521,8 @@ if __name__ == "__main__":
     print(f"#{count} {pisugar.get_alarm_flag()}")
     time.sleep(1)
     count = count + 1
-  '''
 
+  '''
   print(f"get_alarm_repeat = {pisugar.get_alarm_repeat()}")
   print(f"get_time = {pisugar.get_time()}")
   print(f"get_battery_percenteage = {pisugar.get_battery_percentage()}")
