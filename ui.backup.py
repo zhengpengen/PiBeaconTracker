@@ -73,7 +73,6 @@ class Widget:
     self.pos = (0,0)
     self.isSelectable = True 
     self.isFocused = False 
-    self.focusChildId = -1
 
     # child dictionary
     self.children = {} 
@@ -119,81 +118,118 @@ class Widget:
     return False 
 
   #----------------------------------------------
-  #  Find the layer index of the given child_id     
-  #  Returns -1 if child_id is not found in layer
+  #  Return the id of the focused child
+  #  Returns -1 if no child is in focus
   #----------------------------------------------
-  def layerOf(self, child_id): 
-    if child_id != -1:
-      for i in range(len(self.layer)):
-        if self.layer[i] == child_id:
-          return i 
-    return -1
+  def currFocusId(self):
+    id = -1
+    n = len(self.layer)
+    if n > 0:
+      i = self.layer[n-1]
+      if self.children[i].isSelectable:
+        id = i
+    return id
 
   #----------------------------------------------
-  #  Return the id of the next focusable child
-  #  that is not the current focused child.
-  #
-  #  Returns -1 if none is found. 
-  #----------------------------------------------
-  def nextFocusChild(self):
-    if self.focusChildId != -1:
-      idx = self.layerOf(self.focusChildId)
-      n = len(self.layer)
-      while idx < n-1:
-        idx = idx+1
-        nextChildId = self.layer[idx]
-        if nextChildId != self.focusChildId: 
-          if self.children[nextChildId].isSelectable:
-            return nextChildId 
-    return -1
-
-  #----------------------------------------------
-  #  Set focus on the given child_id 
-  #  Returns -1 if child_id is not found in 
-  #  layer or is not selectable
+  #  Set focus on a child given the id.
+  #  Returns the id of child receiving focus
+  #  return -1 if no child is given focus 
   #----------------------------------------------
   def setFocus(self, child_id):
-    print(f"{self.cname}.{self.id} setFocus on {child_id}")
+    id = -1
 
-    prev_id = self.focusChildId
-    idx = self.layerOf(child_id)
-    if idx != -1:
-      self.focusChildId = self.layer[idx] 
-      if self.children[self.focusChildId].isSelectable: 
-        if prev_id != -1:
-          self.children[prev_id].onDeFocus()
-        self.children[self.focusChildId].onFocus()    
-        return self.focusChildId 
-    return -1 
+    if child_id != -1:
+      print(f"{self.cname}.{self.id} setFocus on {self.children[child_id].cname}.{child_id}")
+      count = 0
+      n = len(self.layer)
+      prev_id = self.currFocusId()
+      found = False
+      while n > 0 and count < n:
+        self.layer.rotate(1)
+        i = self.currFocusId()
+        if not found and i == child_id and self.children[i].isSelectable:
+          if prev_id != -1:
+            self.children[prev_id].onDeFocus()
+            self.children[prev_id].isFocused = False
 
+          self.children[i].isFocused = True 
+          self.children[i].onFocus()
+          id = i
+          found = True
+        count = count + 1
+
+    else:
+      print(f"{self.cname}.{self.id} setFocus on {child_id} failed")
+
+    return id 
+ 
   #----------------------------------------------
-  #  setNextFocus
+  #  Return next focused child's ID.  
+  #  Return -1 if no focusable child is found
+  #----------------------------------------------
+  def nextFocusChildId(self):
+    id = -1
+    count = 0
+    n = len(self.layer)
+    found = False
+    while n > 0 and count < n:
+      self.layer.rotate(1)
+      i = self.currFocusId()
+      if not found and i != -1 and self.children[i].isSelectable: 
+        id = i
+        found = True
+      count = count + 1
+
+    return id 
+    
+  #----------------------------------------------
+  #  Find next offspring to focus on
   #
-  #  First call setNextFocus of the child currently 
-  #  in focus to see if any offspring can be focused.
-  #  If yes, return the offspring's id.
-  # 
-  #  If current child's setNextFocus returns -1, no
-  #  offspring can be focused, self should find the 
-  #  next child to focus.
-  #  
-  #  If no suitable next child to focus, return -1.
+  #  If there is a current child, check if the
+  #  current child has offspring to focus on; 
+  #  otherwise the self widget finds the next 
+  #  child to focus on.  If self widget cannot 
+  #  find any offspring to focus on, return -1
+  #  If self has no child, self.DeFocus() is     
+  #  is called and -1 is returned
   #----------------------------------------------
   def setNextFocus(self):
     print(f"{self.cname}.{self.id} setNextFocus")
 
-    if self.focusChildId != -1:
-      grandChildId = self.children[self.focusChildId].setNextFocus()
-      if grandChildId != -1:
-        return grandChildId
-      else:
-        nextChildId = self.nextFocusChild()
-        if self.setFocus(nextChildId) != -1:
-          return self.focusChildId
-    else:
-      print("Error: self.focusChildId is -1")
+    currChildId = self.currFocusId()
 
+    if currChildId != -1:
+  
+      # Find current child's offspring to focus on
+
+      currChild = self.children[currChildId]
+      print(f"{self.cname}.{self.id} currChildId is {currChildId}") 
+
+      nextGrandChildId = currChild.setNextFocus()
+      print(f"{self.cname}.{self.id} nextGrandChildId is {nextGrandChildId}") 
+
+      # If suitable grandchild found, return its id 
+      if nextGrandChildId != -1:
+        print(f"{self.cname}.{self.id} return nextGrandChildId {nextGrandChildId}") 
+        return nextGrandChildId
+
+      # If no suitable grandchild found, focus on
+      # the next suitable child
+      else:
+        nextChildId = self.nextFocusChildId()
+        print(f"{self.cname}.{self.id} nextChildId is {nextChildId}") 
+        if self.setFocus(nextChildId) != -1:
+          print(f"{self.cname}.{self.id} returning nextChildId {nextChildId}") 
+          print(f"{self.cname}.{self.id} returning currChildId {self.currFocusId()}") 
+          return nextChildId 
+        else:
+          print(f"{self.cname}.{self.id} setFocus() returned -1") 
+ 
+
+    # No suitable child or grandchild; return -1
+    print(f"{self.cname}.{self.id} setNextFocus() returning -1") 
     return -1 
+      
 
   #----------------------------------------------
   #  Select a child by calling its onSelect
@@ -233,17 +269,22 @@ class Widget:
     child.id = self.getRoot().genId() 
     self.children[child.id] = child 
     self.layer.append(child.id)
+    # print(f"addChild() appending {child.cname}.{child.id}")
+
     child.onCreate()
     return child.id
 
   #----------------------------------------------
   #  Delete a child and its offsprings.  If the
-  #  child being deleted is in-focus, the next 
-  #  child in layer is given focus
+  #  child to be deleted is is in-focus, the next 
+  #  child is given focus; otherwise parent 
+  #  retains the focus
   #----------------------------------------------
-  def delChild(self, child_id):
+  def delChild(self, id) -> bool:
     try:
-      if child_id == self.focusChildId:
+      theChild = self.children[id]
+
+      if id == self.currFocusId():
         if i > 0:
           self.setFocus(self.layer[i-1])
         elif len(self.layer) > 0:
@@ -271,27 +312,22 @@ class Widget:
   #----------------------------------------------
   def invert(self, color):
     if color == Color.black:
+      print(f"{self.cname}.{self.id} inverting black to white")
       return Color.white
     else:
+      print(f"{self.cname}.{self.id} inverting white to black")
       return Color.black
 
   #----------------------------------------------
   #  Render API stub to be overridden
   #----------------------------------------------
   def renderChildren(self):
-
-    # Render non-focused children according to layer order
-
+    rc = True
     for i in range(len(self.layer)):
-      if self.layer[i] != self.focusChildId:
-        self.children[self.layer[i]].render()
+      child_id = self.layer[i]
+      rc = rc and self.children[child_id].render()
 
-    # Render focused child last so it's the top among peers
-
-    if self.focusChildId != -1:
-      self.children[self.focusChildId].render()
-
-    return 
+    return rc
  
   #----------------------------------------------
   #  Render API stub to be overridden
@@ -429,6 +465,7 @@ class VListBox(Widget):
     self.fill = Color.white
     self.font = TTFont(10)
     self.textColor = Color.black
+    self.firstFocusId = -1
 
   #----------------------------------------------
   #  Render 
@@ -446,9 +483,10 @@ class VListBox(Widget):
   def onFocus(self):
     print(f"{self.cname}.{self.id} onFocus()")
 
-    self.setFocus(self.layer[0])  
-
-    return
+    if self.firstFocusId == -1:
+      return self.setFocus(self.currFocusId()) != -1
+    else:  
+      return self.setFocus(self.firstFocusId) != -1
 
   #----------------------------------------------
   #  onDeFocus 
@@ -456,8 +494,9 @@ class VListBox(Widget):
   def onDeFocus(self):
     print(f"{self.cname}.{self.id} onDeFocus()")
 
-    if self.focusChildId != -1:
-      self.children[self.focusChildId].onDeFocus() 
+    id = self.currFocusId()
+    if id != -1:
+      self.children[id].onDeFocus() 
 
     return
 
@@ -662,17 +701,16 @@ class UI(Widget):
       return 
 
     elif btnPress == "single":
-      print(" ")
       print("Single")
+      print(" ")
       id = self.setNextFocus()
-      if id == -1:  
-        self.setFocus(self.layer[0])
       self.render()
+      print(f"main currFocusId() =  {self.currFocusId()}")
 
     elif btnPress == "long":
       print("Long")
       print(" ")
-      id = self.select(self.focusChildId)
+      id = self.select(self.currFocusId())
       self.render()
 
     return
@@ -724,19 +762,15 @@ class UI(Widget):
     ibox2 = self.addImageBox(pos=(2,2), file="./pic/qrcode.bmp") 
     '''
 
+    # Add a vertical list
     vlist = self.addVListBox(pos=(0,0), dim=(60, 30), font=TTFont(15),  
          textColor=Color.black, outline=Color.black, fill=Color.white)
-    entry1 = vlist.addEntry(0, "Hello1")
-    entry2 = vlist.addEntry(1, "Hello2")
-    entry3 = vlist.addEntry(2, "Hello3")
-
-    vlist2 = self.addVListBox(pos=(60,0), dim=(60, 30), font=TTFont(15),  
-         textColor=Color.black, outline=Color.black, fill=Color.white)
-    entry4 = vlist2.addEntry(0, "Hello4")
-    entry5 = vlist2.addEntry(1, "Hello5")
-    entry6 = vlist2.addEntry(2, "Hello6")
-
-    self.setFocus(self.layer[0])
+    entry4 = vlist.addEntry(2, "Hello3")
+    entry3 = vlist.addEntry(1, "Hello2")
+    entry2 = vlist.addEntry(0, "Hello1")
+    vlist.firstFocusId = entry2.id
+  
+    self.firstFocusId = vlist.id
 
     return
 
@@ -747,8 +781,17 @@ class UI(Widget):
     self.display.startPartial(self.page)
 
     # Build up the UI 
-    print("mainLoop build()  ------------------------------") 
+    print("mainLoop build() ------------------------------") 
     self.build()
+
+    # Set first focus
+    if self.firstFocusId == -1:
+      id = self.currFocusId() 
+    else:
+      id = self.firstFocusId
+
+    if -1 == self.setFocus(id):
+      print("Failed to set initial focus")
 
     # Render the UI 
     print("mainLoop render() -----------------------------") 

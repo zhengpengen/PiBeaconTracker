@@ -503,11 +503,11 @@ def goto_sleep():
 if __name__ == "__main__":
   pisugar = PiSugar2()
 
-  '''
   while True:
     print(f"{pisugar.get_button_press()}")
     time.sleep(0.1)
 
+  '''
   # Set wake alarm for 30 second
   set_wake_after(120)
   goto_sleep()
@@ -522,7 +522,6 @@ if __name__ == "__main__":
     time.sleep(1)
     count = count + 1
 
-  '''
   print(f"get_alarm_repeat = {pisugar.get_alarm_repeat()}")
   print(f"get_time = {pisugar.get_time()}")
   print(f"get_battery_percenteage = {pisugar.get_battery_percentage()}")
@@ -538,3 +537,4 @@ if __name__ == "__main__":
   print(f"get_safe_shutdown_delay = {pisugar.get_safe_shutdown_delay()}")
   print(f"get_button_press = {pisugar.get_button_press()}")
   print(f"get_safe_shutdown_level = {pisugar.get_safe_shutdown_level()}")
+  '''
