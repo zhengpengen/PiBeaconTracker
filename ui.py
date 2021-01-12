@@ -410,18 +410,17 @@ class TextBox(Widget):
     return
 
 #-----------------------------------------------------------------------------
-#   VListBox - Vertical list box 
+#   ListBox - a list box 
 #
-#   After an instance is created, call addEntry() to create the list, then
-#   set 'firstFocusId' to the id of the first entry the gain focus when the
-#   VListBox instance is in Focus.
+#   After an instance is created, call addEntry() to create the list.
+#   Use dir='v' for a vertical list, and dir='h' for a horizontal list 
 #    
 #-----------------------------------------------------------------------------
-class VListBox(Widget):
+class ListBox(Widget):
   #----------------------------------------------
   #  Constructor 
   #----------------------------------------------
-  def __init__(self):
+  def __init__(self, dir='v'):
     Widget.__init__(self)
     self.cname = "ListBox"
     self.margin = (2,2)
@@ -429,6 +428,7 @@ class VListBox(Widget):
     self.fill = Color.white
     self.font = TTFont(10)
     self.textColor = Color.black
+    self.dir = dir
 
   #----------------------------------------------
   #  Render 
@@ -482,9 +482,17 @@ class VListBox(Widget):
   #----------------------------------------------
   #  Add an entry in the ListBox at position 'ord'.
   #  Returns the entry added, which is a TextBox
+  #  Returns -1 if in error
   #----------------------------------------------
   def addEntry(self, ord, text="", isSelectable=True):
-    pos = (self.pos[0], self.pos[1] + ord*self.dim[1])
+
+    if self.dir == 'h':
+      pos = (self.pos[0] + ord*self.dim[0], self.pos[1])
+    elif self.dir == 'v':
+      pos = (self.pos[0], self.pos[1] + ord*self.dim[1])
+    else:
+      return -1
+
     textBox = self._addTextBox(pos, self.dim, text=text, font=self.font,
          textColor=self.textColor, outline=self.outline, fill=self.fill)
     textBox.isSelectable = isSelectable
@@ -607,21 +615,22 @@ class UI(Widget):
     return imageBox
 
   #----------------------------------------------
-  #  Add a VListBox 
+  #  Add a ListBox 
   #----------------------------------------------
-  def addVListBox(self, pos, dim, font=TTFont(15),  
+  def addListBox(self, pos, dim, font=TTFont(15), dir='v',
          textColor=Color.black, outline=Color.black, fill=Color.white):
-    vlistBox = VListBox()
-    vlistBox.dim = dim 
-    vlistBox.pos = pos
-    vlistBox.outline = outline 
-    vlistBox.fill = fill 
-    vlistBox.textColor = textColor 
-    vlistBox.font = font 
+    listBox = ListBox()
+    listBox.dim = dim 
+    listBox.pos = pos
+    listBox.outline = outline 
+    listBox.fill = fill 
+    listBox.textColor = textColor 
+    listBox.font = font 
+    listBox.dir = dir
 
-    self.addChild(vlistBox)
+    self.addChild(listBox)
  
-    return vlistBox
+    return listBox
 
   #----------------------------------------------
   #  Render 
@@ -724,17 +733,21 @@ class UI(Widget):
     ibox2 = self.addImageBox(pos=(2,2), file="./pic/qrcode.bmp") 
     '''
 
-    vlist = self.addVListBox(pos=(0,0), dim=(60, 30), font=TTFont(15),  
-         textColor=Color.black, outline=Color.black, fill=Color.white)
-    entry1 = vlist.addEntry(0, "Hello1")
-    entry2 = vlist.addEntry(1, "Hello2")
-    entry3 = vlist.addEntry(2, "Hello3")
+    tbox1 = self.addTextBox(pos=(0, 0), dim=(60, 30), text="File", font=TTFont(20), 
+                 textColor=Color.black, outline=Color.black, fill=Color.white)
+    tbox1.text_margin = (5,5)
 
-    vlist2 = self.addVListBox(pos=(60,0), dim=(60, 30), font=TTFont(15),  
-         textColor=Color.black, outline=Color.black, fill=Color.white)
-    entry4 = vlist2.addEntry(0, "Hello4")
-    entry5 = vlist2.addEntry(1, "Hello5")
-    entry6 = vlist2.addEntry(2, "Hello6")
+    listbox = self.addListBox(pos=(60,00), dim=(60, 30), font=TTFont(15), dir='v', 
+              textColor=Color.black, outline=Color.black, fill=Color.white)
+    entry1 = listbox.addEntry(0, "Hello1")
+    entry2 = listbox.addEntry(1, "Hello2")
+    entry3 = listbox.addEntry(2, "Hello3")
+
+    listbox2 = self.addListBox(pos=(120,0), dim=(60, 30), font=TTFont(15), dir='h', 
+                    textColor=Color.black, outline=Color.black, fill=Color.white)
+    entry4 = listbox2.addEntry(0, "Hello4")
+    entry5 = listbox2.addEntry(1, "Hello5")
+    entry6 = listbox2.addEntry(2, "Hello6")
 
     self.setFocus(self.layer[0])
 
