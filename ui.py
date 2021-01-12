@@ -522,7 +522,7 @@ class ImageBox(Widget):
     print(f"{self.cname}.{self.id} render()")
     display, page = self.getContext()
     if (display is not None) and (page is not None):
-      display.overlay(page, self.pos, file=self.imageFile)
+      display.overlay(page, (self.pos[1], self.pos[0]), file=self.imageFile)
       return True
 
     return False
@@ -646,7 +646,7 @@ class UI(Widget):
   #  onFocus 
   #----------------------------------------------
   def onFocus(self):
-    print(f"{self.cname}.{self.id} onFocus()")
+    self.setFocus(self.firstFocusId) 
     return
  
   #----------------------------------------------
@@ -674,8 +674,8 @@ class UI(Widget):
       print(" ")
       print("Single")
       id = self.setNextFocus()
-      if id == -1:  
-        self.setFocus(self.layer[0])
+      if id == -1: 
+        self.onFocus() 
       self.render()
 
     elif btnPress == "long":
@@ -715,42 +715,20 @@ class UI(Widget):
   #-----------------------------------------------------------------------------
   def build(self):
 
-    '''
-    ibox1 = self.addImageBox(pos=(2,120), file="./pic/qrcode.bmp") 
+    #  E-Motion background  
 
-    tbox3 = self.addTextBox(pos=(90, 40), dim=(66, 30), text="Search", font=TTFont(20), 
-                 textColor=Color.black, outline=Color.black, fill=Color.white)
-    tbox3.text_margin = (5,5)
+    ibox1 = self.addImageBox(pos=(0,30), file="./pic/emotionlogo.bmp") 
+    self.isSelectable = False
 
-    tbox2 = self.addTextBox(pos=(60, 30), dim=(50, 30), text="Edit", font=TTFont(20), 
-                 textColor=Color.black, outline=Color.black, fill=Color.white)
-    tbox2.text_margin = (5,5)
+    #  Horizontal list box
 
-    tbox1 = self.addTextBox(pos=(5, 110), dim=(50, 30), text="File", font=TTFont(20), 
-                 textColor=Color.black, outline=Color.black, fill=Color.white)
-    tbox1.text_margin = (5,5)
-
-    ibox2 = self.addImageBox(pos=(2,2), file="./pic/qrcode.bmp") 
-    '''
-
-    tbox1 = self.addTextBox(pos=(0, 0), dim=(60, 30), text="File", font=TTFont(20), 
-                 textColor=Color.black, outline=Color.black, fill=Color.white)
-    tbox1.text_margin = (5,5)
-
-    listbox = self.addListBox(pos=(60,00), dim=(60, 30), font=TTFont(15), dir='v', 
-              textColor=Color.black, outline=Color.black, fill=Color.white)
-    entry1 = listbox.addEntry(0, "Hello1")
-    entry2 = listbox.addEntry(1, "Hello2")
-    entry3 = listbox.addEntry(2, "Hello3")
-
-    listbox2 = self.addListBox(pos=(120,0), dim=(60, 30), font=TTFont(15), dir='h', 
+    listbox = self.addListBox(pos=(0,0), dim=(60, 25), font=TTFont(15), dir='h', 
                     textColor=Color.black, outline=Color.black, fill=Color.white)
-    entry4 = listbox2.addEntry(0, "Hello4")
-    entry5 = listbox2.addEntry(1, "Hello5")
-    entry6 = listbox2.addEntry(2, "Hello6")
+    entry1 = listbox.addEntry(0, "File")
+    entry2 = listbox.addEntry(1, "Edit")
+    entry3 = listbox.addEntry(2, "Search")
 
-    self.setFocus(self.layer[0])
-
+    self.firstFocusId = listbox.id
     return
 
   #----------------------------------------------
@@ -760,11 +738,10 @@ class UI(Widget):
     self.display.startPartial(self.page)
 
     # Build up the UI 
-    print("mainLoop build()  ------------------------------") 
     self.build()
+    self.onFocus()
 
     # Render the UI 
-    print("mainLoop render() -----------------------------") 
     self.render()
 
     print(f"Start UI loop")

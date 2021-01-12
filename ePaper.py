@@ -217,7 +217,6 @@ class ePaper:
       sheet = self.newSheet()
       self.overlay(sheet, point=(2, 2), file=os.path.join(self.picdir, 'qrcode.bmp'))
       self.render(sheet)
-      '''
 
       sheet = self.newSheet()
       bmp = self.loadImage("./pic/qrcode.bmp")
@@ -225,9 +224,12 @@ class ePaper:
       self.render(sheet)
 
       ''' 
+
       # Partial update
       sheet = self.newSheet()
       self.startPartial(sheet)
+
+      ''' 
       num = 0
       while (True): 
         self.drawPieSlice(sheet, point=(120, 0), width=50, height=50, start=0, end=num*10, outline=0, fill=0)
@@ -241,12 +243,12 @@ class ePaper:
         if (num == 100):
           break
 
-      bmp = self.loadImage("./pic/qrcode.bmp")
-      self.drawImage(sheet, point=(0,0), image=bmp)
+      ''' 
+
+      self.overlay(sheet, point=(0,0), file="./pic/emotionlogo.bmp")
 
       self.endPartial(clear=True)
 
-      ''' 
 
       print("Done!")
 
