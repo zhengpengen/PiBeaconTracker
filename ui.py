@@ -8,9 +8,10 @@
 #
 #  Author: E-Motion Inc
 #
-#  Confidential and proprietary software
 #  Copyright (c) 2020, E-Motion, Inc.  All Rights Researcved
 # 
+#  License: BSD-3 
+#
 #  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 #  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #  FITNESS OR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -18,19 +19,6 @@
 #  LIABILITY WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
-#
-#  Description:
-#
-#  The UI system is built on widgets, each derived from the Widget class.
-#  Here are the properties of a Widget:
-#
-#   - Root widget is the most sensior parent
-#   - Widget draws to the screen through render() method
-#   - Widget reacts to events through dispatch() method
-#   - Widget dispatches
-#   - Widget can embed children Widgets 
-#   - Widget renders self first then render its children 
-#   - Widget react to event first then render its children 
 #
 #=============================================================================
 import sys
@@ -60,7 +48,6 @@ class Color:
 #   Widget 
 #-----------------------------------------------------------------------------
 class Widget:
-
   #----------------------------------------------
   #  Constructor 
   #----------------------------------------------
@@ -107,7 +94,7 @@ class Widget:
   #  widget gains focus (top of the display)
   #----------------------------------------------
   def onFocus(self):
-    print(f"{self.cname}.{self.id} onFocus()")
+    print(f"Widget.{self.id} onFocus()")
     return False 
 
   #----------------------------------------------
@@ -115,7 +102,7 @@ class Widget:
   #  widget loses its focus 
   #----------------------------------------------
   def onDeFocus(self):
-    print(f"{self.cname}.{self.id} onDeFocus()")
+    print(f"Widget.{self.id} onDeFocus()")
     return False 
 
   #----------------------------------------------
@@ -180,7 +167,7 @@ class Widget:
   #  If no suitable next child to focus, return -1.
   #----------------------------------------------
   def setNextFocus(self):
-    print(f"{self.cname}.{self.id} setNextFocus")
+    print(f"Widget.{self.id} setNextFocus")
 
     if self.focusChildId != -1:
       grandChildId = self.children[self.focusChildId].setNextFocus()
@@ -297,10 +284,17 @@ class Widget:
   #  Render API stub to be overridden
   #----------------------------------------------
   def render(self):
-    print(f"{self.cname}.{self.id} render()")
+    print(f"Widget.{self.id} render()")
     return False 
 
-  
+  '''
+  #----------------------------------------------
+  #  Children widgets should be build in here 
+  #----------------------------------------------
+  def build(self):
+    return
+  '''
+ 
 #-----------------------------------------------------------------------------
 #   Rect 
 #-----------------------------------------------------------------------------
@@ -309,7 +303,7 @@ class Rect(Widget):
   #  Constructor
   #----------------------------------------------
   def __init__(self):
-    Widget.__init__(self) 
+    super().__init__() 
     self.cname = "Rect"
     self.margin = (2,2) 
     self.outline = Color.black 
@@ -320,7 +314,7 @@ class Rect(Widget):
   #  render() 
   #----------------------------------------------
   def render(self):
-    print(f"{self.cname}.{self.id} render()")
+    print(f"Rect.{self.id} render()")
 
     display, page = self.getContext()
     if (display is not None) and (page is not None):
@@ -337,7 +331,7 @@ class Rect(Widget):
   #  onFocus 
   #----------------------------------------------
   def onFocus(self): 
-    print(f"{self.cname}.{self.id} onFocus()")
+    print(f"Rect.{self.id} onFocus()")
 
     if not self.isFocused: 
       self.fill = self.invert(color=self.fill)
@@ -348,7 +342,7 @@ class Rect(Widget):
   #  onDeFocus 
   #----------------------------------------------
   def onDeFocus(self):
-    print(f"{self.cname}.{self.id} onDeFocus()")
+    print(f"Rect.{self.id} onDeFocus()")
 
     if self.isFocused:
       self.fill = self.invert(color=self.fill)
@@ -363,9 +357,9 @@ class TextBox(Widget):
   #  Constructor 
   #----------------------------------------------
   def __init__(self):
-    Widget.__init__(self) 
+    super().__init__() 
     self.cname = "TextBox"
-    self.margin = (2,2)
+    self.margin = (0,0)
     self.outline = Color.black 
     self.fill = Color.white 
     self.text = ""
@@ -376,7 +370,7 @@ class TextBox(Widget):
   #  render
   #----------------------------------------------
   def render(self):
-    print(f"{self.cname}.{self.id} render()")
+    print(f"TextBox.{self.id} render()")
     display, page = self.getContext()
     if (display is not None) and (page is not None):
       display.drawRect(page, self.pos, self.dim[0], self.dim[1], 
@@ -391,8 +385,7 @@ class TextBox(Widget):
   #  onFocus 
   #----------------------------------------------
   def onFocus(self):
-    print(f"{self.cname}.{self.id} onFocus()")
-
+    print(f"TextBox.{self.id} onFocus()")
     self.textColor = Color.white
     self.fill = Color.black
 
@@ -402,7 +395,7 @@ class TextBox(Widget):
   #  onDeFocus 
   #----------------------------------------------
   def onDeFocus(self):
-    print(f"{self.cname}.{self.id} onDeFocus()")
+    print(f"TextBox.{self.id} onDeFocus()")
 
     self.textColor = Color.black
     self.fill = Color.white
@@ -421,7 +414,7 @@ class ListBox(Widget):
   #  Constructor 
   #----------------------------------------------
   def __init__(self, dir='v'):
-    Widget.__init__(self)
+    super().__init__()
     self.cname = "ListBox"
     self.margin = (2,2)
     self.outline = Color.black
@@ -434,7 +427,7 @@ class ListBox(Widget):
   #  Render 
   #----------------------------------------------
   def render(self):
-    print(f"{self.cname}.{self.id} render()")
+    print(f"ListBox.{self.id} render()")
     self.renderChildren()
     return
 
@@ -444,7 +437,7 @@ class ListBox(Widget):
   #  Return False if if no child can be focused
   #----------------------------------------------
   def onFocus(self):
-    print(f"{self.cname}.{self.id} onFocus()")
+    print(f"ListBox.{self.id} onFocus()")
 
     self.setFocus(self.layer[0])  
 
@@ -454,7 +447,7 @@ class ListBox(Widget):
   #  onDeFocus 
   #----------------------------------------------
   def onDeFocus(self):
-    print(f"{self.cname}.{self.id} onDeFocus()")
+    print(f"ListBox.{self.id} onDeFocus()")
 
     if self.focusChildId != -1:
       self.children[self.focusChildId].onDeFocus() 
@@ -508,7 +501,7 @@ class ImageBox(Widget):
   #  Constructor
   #----------------------------------------------
   def __init__(self):
-    Widget.__init__(self)
+    super().__init__()
     self.cname = "ImageBox"
     self.margin = (0,0)
     self.outline = Color.black
@@ -519,7 +512,7 @@ class ImageBox(Widget):
   #  render
   #----------------------------------------------
   def render(self):
-    print(f"{self.cname}.{self.id} render()")
+    print(f"ImageBox.{self.id} render()")
     display, page = self.getContext()
     if (display is not None) and (page is not None):
       display.overlay(page, (self.pos[1], self.pos[0]), file=self.imageFile)
@@ -531,15 +524,73 @@ class ImageBox(Widget):
   #  onFocus 
   #----------------------------------------------
   def onFocus(self):
-    print(f"{self.cname}.{self.id} onFocus()")
+    print(f"ImageBox.{self.id} onFocus()")
     return
 
   #----------------------------------------------
   #  onDeFocus 
   #----------------------------------------------
   def onDeFocus(self):
-    print(f"{self.cname}.{self.id} onDeFocus()")
+    print(f"ImageBox.{self.id} onDeFocus()")
     return
+
+
+#-----------------------------------------------------------------------------
+#   DropList() 
+#-----------------------------------------------------------------------------
+class DropList(TextBox):
+  #----------------------------------------------
+  #  Constructor 
+  #----------------------------------------------
+  def __init__(self):
+    super().__init__()
+    self.cname = "DropList"
+    self.offset = (0, 0)
+    self.listBox = ListBox()
+    self.showList = False
+
+  #----------------------------------------------
+  #  render 
+  #----------------------------------------------
+  def render(self):
+    print(f"DropList.{self.id} render()")
+    super().render() 
+    if self.showList:  
+      self.renderChildren()
+    return
+
+  #----------------------------------------------
+  #  onFocus 
+  #----------------------------------------------
+  def onFocus(self):
+    print(f"DropList.{self.id} onFocus()")
+    super().onFocus()
+    self.showList = True  
+    self.setFocus(self.listBox.id)
+    return
+ 
+  #----------------------------------------------
+  #  onDeFocus 
+  #----------------------------------------------
+  def onDeFocus(self):
+    print(f"DropList.{self.id} onDeFocus()")
+    super().onDeFocus()
+    self.showList = False 
+    return
+
+  #----------------------------------------------
+  #  onSelect 
+  #----------------------------------------------
+  def onSelect(self):
+    return
+
+  #----------------------------------------------
+  #  Add an entry in the DropList at position 'ord'.
+  #  Returns the entry added, which is a TextBox
+  #  Returns -1 if in error
+  #----------------------------------------------
+  def addEntry(self, ord, text="", isSelectable=True):
+    return self.listBox.addEntry(ord, text, isSelectable)
 
 
 #-----------------------------------------------------------------------------
@@ -550,7 +601,7 @@ class UI(Widget):
   #  Constructor
   #----------------------------------------------
   def __init__(self, display, btnFunc):
-    Widget.__init__(self) 
+    super().__init__() 
     self.idgen = 0
     self.firstFocusId = -1
 
@@ -633,10 +684,41 @@ class UI(Widget):
     return listBox
 
   #----------------------------------------------
+  #  Add a DropList 
+  #----------------------------------------------
+  def addDropList(self, pos, dim, text="", font=TTFont(15), offset=(30,30), 
+         textColor=Color.black, outline=Color.black, fill=Color.white):
+    
+    # Style title TextBox()
+    dropList = DropList()
+    dropList.pos = pos
+    dropList.dim = dim
+    dropList.offset = offset
+    dropList.font = font
+    dropList.textColor = textColor
+    dropList.outline = outline
+    dropList.fill = fill
+    dropList.text = text
+
+    # Style ListBox() 
+    dropList.listBox.pos = (dropList.pos[0]+dropList.offset[0],
+                            dropList.pos[1]+dropList.offset[1])
+    dropList.listBox.dim = dim
+    dropList.listBox.font = font
+    dropList.listBox.textColor = textColor
+    dropList.listBox.outline = outline
+    dropList.listBox.fill = fill
+
+    self.addChild(dropList)
+    dropList.addChild(dropList.listBox)
+
+    return dropList 
+  
+  #----------------------------------------------
   #  Render 
   #----------------------------------------------
   def render(self):
-    print(f"{self.cname}.{self.id} render()")
+    print(f"Root.{self.id} render()")
 
     self.renderChildren()
 
@@ -646,6 +728,7 @@ class UI(Widget):
   #  onFocus 
   #----------------------------------------------
   def onFocus(self):
+    print(f"Root.{self.id} onFocus()")
     self.setFocus(self.firstFocusId) 
     return
  
@@ -653,7 +736,7 @@ class UI(Widget):
   #  onFocus 
   #----------------------------------------------
   def onDeFocus(self):
-    print(f"{self.cname}.{self.id} onDeFocus()")
+    print(f"Root.{self.id} onDeFocus()")
     return
 
   #----------------------------------------------
@@ -720,15 +803,29 @@ class UI(Widget):
     ibox1 = self.addImageBox(pos=(0,30), file="./pic/emotionlogo.bmp") 
     self.isSelectable = False
 
+    '''
     #  Horizontal list box
-
     listbox = self.addListBox(pos=(0,0), dim=(60, 25), font=TTFont(15), dir='h', 
                     textColor=Color.black, outline=Color.black, fill=Color.white)
     entry1 = listbox.addEntry(0, "File")
     entry2 = listbox.addEntry(1, "Edit")
     entry3 = listbox.addEntry(2, "Search")
+    '''
 
-    self.firstFocusId = listbox.id
+    dropList = self.addDropList(pos=(0,0), dim=(60, 25), text="Choice", font=TTFont(15), 
+                    textColor=Color.black, outline=Color.black, fill=Color.white)
+    entry1 = dropList.addEntry(0, "File")
+    entry2 = dropList.addEntry(1, "Edit")
+    entry3 = dropList.addEntry(2, "Search")
+
+
+    dropList2 = self.addDropList(pos=(60,0), dim=(60, 25), text="Select", font=TTFont(15),
+                    textColor=Color.black, outline=Color.black, fill=Color.white)
+    opt1 = dropList2.addEntry(0, "Option 1")
+    opt2 = dropList2.addEntry(1, "Option 2")
+    opt3 = dropList2.addEntry(2, "Option 3")
+
+    self.firstFocusId = dropList.id
     return
 
   #----------------------------------------------
