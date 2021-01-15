@@ -68,7 +68,7 @@ class ePaper:
   #---------------------------------------------------------------------------
   def drawRect(self, sheet, point, width, height, outline=0, fill=0):
     draw = ImageDraw.Draw(sheet)
-    points = [point, (point[0]+width, point[1]+height)]
+    points = (point[0],point[1], point[0]+width, point[1]+height)
     return draw.rectangle(points, outline=outline, fill=fill)
 
   #---------------------------------------------------------------------------
@@ -83,7 +83,7 @@ class ePaper:
   #---------------------------------------------------------------------------
   def drawChord(self, sheet, point, width, height, start, end, outline=None, fill=None):
     draw = ImageDraw.Draw(sheet)
-    points = [point, (point[0]+width, point[1]+height)]
+    points = (point[0], point[1], point[0]+width, point[1]+height)
     return draw.chord(points, start, end, outline=outline, fill=fill)
 
   #---------------------------------------------------------------------------
@@ -91,7 +91,7 @@ class ePaper:
   #---------------------------------------------------------------------------
   def drawEllipse(self, sheet, point, width, height, outline=0, fill=0):
     draw = ImageDraw.Draw(sheet)
-    points = [point, (point[0]+width, point[1]+height)]
+    points = (point[0], point[1], point[0]+width, point[1]+height)
     return draw.ellipse(points, outline=outline, fill=fill)
 
   #---------------------------------------------------------------------------
@@ -99,7 +99,7 @@ class ePaper:
   #---------------------------------------------------------------------------
   def drawPieSlice(self, sheet, point, width, height, start, end, outline=0, fill=0):
     draw = ImageDraw.Draw(sheet)
-    points = [point, (point[0]+width, point[1]+height)]
+    points = (point[0], point[1], point[0]+width, point[1]+height)
     draw.pieslice(points, start, end, outline=outline, fill=fill)
 
   #---------------------------------------------------------------------------

@@ -56,8 +56,8 @@ class Widget:
     self.cname = "Widget" 
     self.id = -1 
     self.parent = None 
-    self.dim = (0,0) 
-    self.pos = (0,0)
+    self.dim = [0,0] 
+    self.pos = [0,0]
     self.isSelectable = True 
     self.isFocused = False 
     self.focusChildId = -1
@@ -287,14 +287,6 @@ class Widget:
     print(f"Widget.{self.id} render()")
     return False 
 
-  '''
-  #----------------------------------------------
-  #  Children widgets should be build in here 
-  #----------------------------------------------
-  def build(self):
-    return
-  '''
- 
 #-----------------------------------------------------------------------------
 #   Rect 
 #-----------------------------------------------------------------------------
@@ -305,7 +297,7 @@ class Rect(Widget):
   def __init__(self):
     super().__init__() 
     self.cname = "Rect"
-    self.margin = (2,2) 
+    self.margin = [2,2] 
     self.outline = Color.black 
     self.fill = Color.white 
 
@@ -359,7 +351,7 @@ class TextBox(Widget):
   def __init__(self):
     super().__init__() 
     self.cname = "TextBox"
-    self.margin = (0,0)
+    self.margin = [0,0]
     self.outline = Color.black 
     self.fill = Color.white 
     self.text = ""
@@ -375,7 +367,7 @@ class TextBox(Widget):
     if (display is not None) and (page is not None):
       display.drawRect(page, self.pos, self.dim[0], self.dim[1], 
                        outline=self.outline, fill=self.fill)
-      pos = (self.pos[0] + self.margin[0], self.pos[1] + self.margin[1])
+      pos = [self.pos[0] + self.margin[0], self.pos[1] + self.margin[1]]
       display.drawText(page, pos, self.text, font=self.font, fill=self.textColor)
       return True
 
@@ -402,6 +394,13 @@ class TextBox(Widget):
 
     return
 
+  #----------------------------------------------
+  #  Returns text width in pixel 
+  #----------------------------------------------
+  def textWidth(self):
+    (width, baseline), (offset_x, offset_y) = self.font.font.getsize(self.text)
+    return width
+
 #-----------------------------------------------------------------------------
 #   ListBox - a list box 
 #
@@ -416,7 +415,7 @@ class ListBox(Widget):
   def __init__(self, dir='v'):
     super().__init__()
     self.cname = "ListBox"
-    self.margin = (2,2)
+    self.margin = [2,2]
     self.outline = Color.black
     self.fill = Color.white
     self.font = TTFont(10)
@@ -480,9 +479,9 @@ class ListBox(Widget):
   def addEntry(self, ord, text="", isSelectable=True):
 
     if self.dir == 'h':
-      pos = (self.pos[0] + ord*self.dim[0], self.pos[1])
+      pos = [self.pos[0] + ord*self.dim[0], self.pos[1]]
     elif self.dir == 'v':
-      pos = (self.pos[0], self.pos[1] + ord*self.dim[1])
+      pos = [self.pos[0], self.pos[1] + ord*self.dim[1]]
     else:
       return -1
 
@@ -503,7 +502,7 @@ class ImageBox(Widget):
   def __init__(self):
     super().__init__()
     self.cname = "ImageBox"
-    self.margin = (0,0)
+    self.margin = [0,0]
     self.outline = Color.black
     self.fill = Color.white
     self.imageFile = ""
@@ -545,7 +544,7 @@ class DropList(TextBox):
   def __init__(self):
     super().__init__()
     self.cname = "DropList"
-    self.offset = (0, 0)
+    self.offset = [0, 0]
     self.listBox = ListBox()
     self.showList = False
 
@@ -594,6 +593,79 @@ class DropList(TextBox):
 
 
 #-----------------------------------------------------------------------------
+#  TickerTape 
+#-----------------------------------------------------------------------------
+class TickerTape(TextBox):
+  def __init__(self):
+    super().__init__()
+    self.cname = "TickerTape"
+    self.thread = threading.Thread(target=self.loop) 
+    self.thread.setDaemon(True)
+    self.isSelectable = False
+    self.isRunning = False
+    self.shift = 0
+    self.speed = 20 
+    self.repeat = True 
+ 
+  #----------------------------------------------
+  #  loop 
+  #----------------------------------------------
+  def loop(self):
+    print(f"{self.cname}.{self.id} loop()") 
+
+    self.isRunning = True
+    root = self.getRoot()
+    display, page = self.getContext()
+    pos = [0, self.pos[1]]
+    text_pos = [self.pos[0] + self.margin[0], self.pos[1] + self.margin[1]]
+    dim = [display.width, self.dim[1]] 
+
+    if (root is not None) and (display is not None) and (page is not None):
+      shift = 0
+      while self.isRunning:
+        shift = shift + self.speed   
+        text_pos[0] = text_pos[0] - shift
+        display.drawRect(page, pos, dim[0], dim[1], outline=self.outline, fill=self.fill)
+        display.drawText(page, text_pos, self.text, font=self.font, fill=self.textColor)
+        root.renderDisplay() 
+
+        if (text_pos[0] + self.textWidth()) < 0 and self.repeat:
+          shift = 0
+          text_pos[0] = display.width
+    
+        time.sleep(0.001) 
+ 
+    else:
+      print(f"TickerTape() loop error: root={root}, display={display}, page={page}")    
+
+    return False
+ 
+  #----------------------------------------------
+  #  Start the ticker
+  #----------------------------------------------
+  def start(self):
+    print(f"{self.cname}.{self.id} starting") 
+    if not self.isRunning:
+      self.thread.start()
+    
+  #----------------------------------------------
+  #  Stop the ticker
+  #----------------------------------------------
+  def stop(self):
+    print(f"{self.cname}.{self.id} stopping") 
+    if self.isRunning:
+      self.isRunning = False
+      self.thread.join() 
+      print(f"{self.cname}.{self.id} stopped") 
+
+  #----------------------------------------------
+  #  render() 
+  #----------------------------------------------
+  def render(self):
+    print(f"{self.cname}.{self.id} render()") 
+    self.start()
+ 
+#-----------------------------------------------------------------------------
 #   UI 
 #-----------------------------------------------------------------------------
 class UI(Widget):
@@ -608,10 +680,11 @@ class UI(Widget):
     self.cname = "Root"
     parent = None 
     self.display = display
-    self.dim=(self.display.width, self.display.height) 
+    self.dim=[self.display.width, self.display.height] 
     self.page = self.display.newSheet() 
     self.btnFunc = btnFunc 
-     
+    
+    self.renderLock = threading.Lock() 
     self.mainThread = threading.Thread(target=self.mainLoop) 
     self.mainThread.setDaemon(True)
     self.exitLoop = False
@@ -686,7 +759,7 @@ class UI(Widget):
   #----------------------------------------------
   #  Add a DropList 
   #----------------------------------------------
-  def addDropList(self, pos, dim, text="", font=TTFont(15), offset=(30,30), 
+  def addDropList(self, pos, dim, text="", font=TTFont(15), offset=[30,30], 
          textColor=Color.black, outline=Color.black, fill=Color.white):
     
     # Style title TextBox()
@@ -715,14 +788,40 @@ class UI(Widget):
     return dropList 
   
   #----------------------------------------------
+  #  Add a ticker tape 
+  #----------------------------------------------
+  def addTickerTape(self, pos, dim, text="", font=TTFont(15),  
+                textColor=Color.black, outline=Color.black, fill=Color.white):
+    ticker = TickerTape()
+    ticker.pos = pos
+    ticker.dim = dim
+    ticker.font = font
+    ticker.textColor = textColor
+    ticker.outline = outline
+    ticker.fill = fill
+    ticker.text = text
+
+    self.addChild(ticker)
+    return ticker
+
+  #----------------------------------------------
+  #  Thread-safe render call
+  #----------------------------------------------
+  def renderDisplay(self):
+    print("UI renderDisplay()")
+
+    self.renderLock.acquire()    
+    self.display.renderPartial(self.page)
+    self.renderLock.release()    
+
+  #----------------------------------------------
   #  Render 
   #----------------------------------------------
   def render(self):
     print(f"Root.{self.id} render()")
-
     self.renderChildren()
-
-    self.display.renderPartial(self.page)
+    # self.display.renderPartial(self.page)
+    self.renderDisplay()
 
   #----------------------------------------------
   #  onFocus 
@@ -800,30 +899,35 @@ class UI(Widget):
 
     #  E-Motion background  
 
-    ibox1 = self.addImageBox(pos=(0,30), file="./pic/emotionlogo.bmp") 
+    ibox1 = self.addImageBox(pos=[0,30], file="./pic/emotionlogo.bmp") 
     self.isSelectable = False
 
-    '''
     #  Horizontal list box
-    listbox = self.addListBox(pos=(0,0), dim=(60, 25), font=TTFont(15), dir='h', 
+    listbox = self.addListBox(pos=[0,0], dim=[60, 25], font=TTFont(15), dir='h', 
                     textColor=Color.black, outline=Color.black, fill=Color.white)
     entry1 = listbox.addEntry(0, "File")
     entry2 = listbox.addEntry(1, "Edit")
     entry3 = listbox.addEntry(2, "Search")
-    '''
 
-    dropList = self.addDropList(pos=(0,0), dim=(60, 25), text="Choice", font=TTFont(15), 
+    dropList = self.addDropList(pos=[0,0], dim=[60, 25], text="Choice", font=TTFont(15), 
                     textColor=Color.black, outline=Color.black, fill=Color.white)
     entry1 = dropList.addEntry(0, "File")
     entry2 = dropList.addEntry(1, "Edit")
     entry3 = dropList.addEntry(2, "Search")
 
 
-    dropList2 = self.addDropList(pos=(60,0), dim=(60, 25), text="Select", font=TTFont(15),
+    dropList2 = self.addDropList(pos=[60,0], dim=[60, 25], text="Select", font=TTFont(15),
                     textColor=Color.black, outline=Color.black, fill=Color.white)
     opt1 = dropList2.addEntry(0, "Option 1")
     opt2 = dropList2.addEntry(1, "Option 2")
     opt3 = dropList2.addEntry(2, "Option 3")
+
+
+    ticker = self.addTickerTape(pos=[0, self.display.height-25], dim=[2, 25], 
+                    text="Go Astros!  Go Rockets!  Go Texasns!  Go Dynamos!  Go Houston!", 
+                    font=TTFont(20),
+                    textColor=Color.black, outline=Color.white, fill=Color.white)
+    ticker.margin = [2, 2] 
 
     self.firstFocusId = dropList.id
     return
