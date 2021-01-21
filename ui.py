@@ -689,6 +689,10 @@ class UI(Widget):
     self.mainThread.setDaemon(True)
     self.exitLoop = False
 
+    #  Blank background
+    blank = self.addImageBox(pos=[0,30], file="./pic/blank.bmp")
+    self.isSelectable = False 
+ 
   #----------------------------------------------
   #  Generate unique ID
   #----------------------------------------------
@@ -897,9 +901,8 @@ class UI(Widget):
   #-----------------------------------------------------------------------------
   def build(self):
 
-    #  E-Motion background  
-
-    ibox1 = self.addImageBox(pos=[0,30], file="./pic/emotionlogo.bmp") 
+    #  Blank background  
+    blank = self.addImageBox(pos=[0,30], file="./pic/emotionlogo.bmp") 
     self.isSelectable = False
 
     #  Horizontal list box
